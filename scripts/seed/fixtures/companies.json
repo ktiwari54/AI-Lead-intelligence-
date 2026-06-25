@@ -1,0 +1,222 @@
+[
+  {
+    "name": "Cloudify Solutions",
+    "domain": "cloudifysolutions.com",
+    "industry": "SaaS",
+    "country": "US",
+    "city": "San Francisco",
+    "employee_count": 320,
+    "annual_revenue": 42000000,
+    "description": "Cloud infrastructure automation platform helping DevOps teams deploy faster with less manual intervention.",
+    "technologies": ["Kubernetes", "Terraform", "Python", "Go", "AWS", "PostgreSQL"]
+  },
+  {
+    "name": "PayStream Technologies",
+    "domain": "paystreamtech.io",
+    "industry": "Fintech",
+    "country": "UK",
+    "city": "London",
+    "employee_count": 185,
+    "annual_revenue": 28000000,
+    "description": "Real-time payment orchestration platform serving mid-market retailers across Europe.",
+    "technologies": ["Node.js", "React", "Kafka", "PostgreSQL", "Stripe", "GCP"]
+  },
+  {
+    "name": "MedAnalytics Corp",
+    "domain": "medanalytics.com",
+    "industry": "Healthcare",
+    "country": "US",
+    "city": "Boston",
+    "employee_count": 540,
+    "annual_revenue": 87000000,
+    "description": "Clinical data analytics and AI-powered diagnostic support for hospital networks and health systems.",
+    "technologies": ["Python", "R", "Spark", "TensorFlow", "FHIR", "Azure"]
+  },
+  {
+    "name": "ShopNexus Inc",
+    "domain": "shopnexus.com",
+    "industry": "E-commerce",
+    "country": "US",
+    "city": "Austin",
+    "employee_count": 210,
+    "annual_revenue": 31000000,
+    "description": "Headless e-commerce platform enabling brands to launch and iterate storefronts at speed.",
+    "technologies": ["Next.js", "GraphQL", "Shopify", "Vercel", "MongoDB", "Redis"]
+  },
+  {
+    "name": "Brightpath Consulting",
+    "domain": "brightpathconsulting.com",
+    "industry": "Consulting",
+    "country": "CA",
+    "city": "Toronto",
+    "employee_count": 90,
+    "annual_revenue": 14000000,
+    "description": "Digital transformation and enterprise architecture advisory firm specializing in financial services clients.",
+    "technologies": ["Salesforce", "SAP", "PowerBI", "Azure", "Jira"]
+  },
+  {
+    "name": "DataVault GmbH",
+    "domain": "datavault.de",
+    "industry": "SaaS",
+    "country": "DE",
+    "city": "Berlin",
+    "employee_count": 130,
+    "annual_revenue": 19500000,
+    "description": "GDPR-compliant data warehouse and business intelligence SaaS for European mid-market enterprises.",
+    "technologies": ["dbt", "Snowflake", "Looker", "Python", "Airflow"]
+  },
+  {
+    "name": "QuantumLeap AI",
+    "domain": "quantumleapai.com",
+    "industry": "SaaS",
+    "country": "US",
+    "city": "New York",
+    "employee_count": 75,
+    "annual_revenue": 9800000,
+    "description": "Generative AI platform for enterprise knowledge management and internal search.",
+    "technologies": ["Python", "LangChain", "OpenAI", "Pinecone", "FastAPI", "React"]
+  },
+  {
+    "name": "FinSecure Ltd",
+    "domain": "finsecure.co.uk",
+    "industry": "Fintech",
+    "country": "UK",
+    "city": "Edinburgh",
+    "employee_count": 260,
+    "annual_revenue": 45000000,
+    "description": "Regulatory compliance and transaction monitoring solutions for UK and EU financial institutions.",
+    "technologies": ["Java", "Spring Boot", "Kafka", "Oracle", "AWS", "Elastic"]
+  },
+  {
+    "name": "CareConnect India",
+    "domain": "careconnect.in",
+    "industry": "Healthcare",
+    "country": "IN",
+    "city": "Bangalore",
+    "employee_count": 420,
+    "annual_revenue": 22000000,
+    "description": "Telemedicine and patient engagement platform serving over 2 million patients across tier-1 and tier-2 Indian cities.",
+    "technologies": ["React Native", "Node.js", "MySQL", "AWS", "Twilio", "WebRTC"]
+  },
+  {
+    "name": "RetailBoost",
+    "domain": "retailboost.io",
+    "industry": "E-commerce",
+    "country": "CA",
+    "city": "Vancouver",
+    "employee_count": 55,
+    "annual_revenue": 6200000,
+    "description": "AI-powered personalization and product recommendation engine for Shopify and BigCommerce merchants.",
+    "technologies": ["Python", "Scikit-learn", "Shopify", "BigCommerce", "AWS Lambda"]
+  },
+  {
+    "name": "EngineerEdge GmbH",
+    "domain": "engineeredge.de",
+    "industry": "Consulting",
+    "country": "DE",
+    "city": "Munich",
+    "employee_count": 170,
+    "annual_revenue": 26000000,
+    "description": "Engineering consultancy focused on embedded systems and IoT solutions for German automotive and manufacturing sectors.",
+    "technologies": ["C++", "Python", "MQTT", "Azure IoT", "ROS", "MATLAB"]
+  },
+  {
+    "name": "NexaHealth",
+    "domain": "nexahealth.com",
+    "industry": "Healthcare",
+    "country": "US",
+    "city": "Chicago",
+    "employee_count": 980,
+    "annual_revenue": 153000000,
+    "description": "Enterprise EHR integration and interoperability platform serving large US hospital systems.",
+    "technologies": ["Java", "HL7 FHIR", "AWS", "PostgreSQL", "Kafka", "Angular"]
+  },
+  {
+    "name": "CreditWise Analytics",
+    "domain": "creditwiseanalytics.com",
+    "industry": "Fintech",
+    "country": "US",
+    "city": "Charlotte",
+    "employee_count": 145,
+    "annual_revenue": 33000000,
+    "description": "Alternative credit scoring and risk assessment platform leveraging open banking data for lenders.",
+    "technologies": ["Python", "XGBoost", "Plaid", "AWS", "Redshift", "Tableau"]
+  },
+  {
+    "name": "TaskFlow SaaS",
+    "domain": "taskflowsaas.com",
+    "industry": "SaaS",
+    "country": "IN",
+    "city": "Hyderabad",
+    "employee_count": 60,
+    "annual_revenue": 4500000,
+    "description": "Project management and team collaboration tool purpose-built for software development teams.",
+    "technologies": ["Vue.js", "Django", "PostgreSQL", "Redis", "Celery", "Docker"]
+  },
+  {
+    "name": "GlobalTech Consulting",
+    "domain": "globaltechconsulting.com",
+    "industry": "Consulting",
+    "country": "US",
+    "city": "Seattle",
+    "employee_count": 340,
+    "annual_revenue": 58000000,
+    "description": "Cloud migration, data engineering, and ML platform consulting for Fortune 500 companies.",
+    "technologies": ["AWS", "GCP", "Azure", "Terraform", "dbt", "Databricks", "Spark"]
+  },
+  {
+    "name": "EduLearn Platform",
+    "domain": "edulearn.io",
+    "industry": "SaaS",
+    "country": "UK",
+    "city": "Manchester",
+    "employee_count": 110,
+    "annual_revenue": 12000000,
+    "description": "AI-adaptive learning management system for corporate L&D teams, with skills gap analysis.",
+    "technologies": ["React", "Python", "FastAPI", "PostgreSQL", "OpenAI", "Heroku"]
+  },
+  {
+    "name": "CloudFlow Inc",
+    "domain": "cloudflow.com",
+    "industry": "SaaS",
+    "country": "CA",
+    "city": "Montreal",
+    "employee_count": 230,
+    "annual_revenue": 38000000,
+    "description": "Workflow automation platform connecting 200+ SaaS tools for operations and revenue teams.",
+    "technologies": ["Node.js", "React", "GraphQL", "AWS", "MongoDB", "Zapier API"]
+  },
+  {
+    "name": "BioNova Research",
+    "domain": "bionovaresearch.com",
+    "industry": "Healthcare",
+    "country": "DE",
+    "city": "Hamburg",
+    "employee_count": 290,
+    "annual_revenue": 67000000,
+    "description": "Bioinformatics and clinical genomics data processing platform for pharmaceutical research teams.",
+    "technologies": ["Python", "R", "Nextflow", "AWS Batch", "Snowflake", "Docker"]
+  },
+  {
+    "name": "DataSync Solutions",
+    "domain": "datasyncsolutions.io",
+    "industry": "SaaS",
+    "country": "IN",
+    "city": "Mumbai",
+    "employee_count": 185,
+    "annual_revenue": 17000000,
+    "description": "Real-time data integration and CDC pipeline platform for enterprises modernizing their data stack.",
+    "technologies": ["Java", "Kafka", "Debezium", "Flink", "AWS", "PostgreSQL", "Elasticsearch"]
+  },
+  {
+    "name": "SupplyChain AI",
+    "domain": "supplychainai.com",
+    "industry": "SaaS",
+    "country": "US",
+    "city": "Dallas",
+    "employee_count": 400,
+    "annual_revenue": 72000000,
+    "description": "AI-driven demand forecasting and supply chain optimization SaaS for manufacturing and logistics enterprises.",
+    "technologies": ["Python", "Prophet", "AWS SageMaker", "Snowflake", "Tableau", "React"]
+  }
+]

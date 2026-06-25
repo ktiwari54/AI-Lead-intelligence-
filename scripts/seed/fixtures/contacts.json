@@ -1,0 +1,502 @@
+[
+  {
+    "first_name": "Alexandra",
+    "last_name": "Chen",
+    "email": "alexandra.chen@cloudifysolutions.com",
+    "designation": "Chief Executive Officer",
+    "department": "Executive",
+    "seniority": "C_LEVEL",
+    "phone": "+1-415-555-0101",
+    "linkedin_url": "https://linkedin.com/in/alexandrachen-ceo"
+  },
+  {
+    "first_name": "Marcus",
+    "last_name": "Williams",
+    "email": "m.williams@paystreamtech.io",
+    "designation": "Chief Technology Officer",
+    "department": "Engineering",
+    "seniority": "C_LEVEL",
+    "phone": "+44-20-5555-0102",
+    "linkedin_url": "https://linkedin.com/in/marcuswilliams-cto"
+  },
+  {
+    "first_name": "Priya",
+    "last_name": "Sharma",
+    "email": "priya.sharma@medanalytics.com",
+    "designation": "VP of Product",
+    "department": "Product",
+    "seniority": "VP",
+    "phone": "+1-617-555-0103",
+    "linkedin_url": "https://linkedin.com/in/priyasharma-vp"
+  },
+  {
+    "first_name": "James",
+    "last_name": "O'Brien",
+    "email": "jobrien@shopnexus.com",
+    "designation": "Director of Sales",
+    "department": "Sales",
+    "seniority": "DIRECTOR",
+    "phone": "+1-512-555-0104",
+    "linkedin_url": null
+  },
+  {
+    "first_name": "Sophie",
+    "last_name": "Tremblay",
+    "email": "sophie.tremblay@brightpathconsulting.com",
+    "designation": "Managing Partner",
+    "department": "Executive",
+    "seniority": "C_LEVEL",
+    "phone": "+1-416-555-0105",
+    "linkedin_url": "https://linkedin.com/in/sophietremblay"
+  },
+  {
+    "first_name": "Klaus",
+    "last_name": "Hoffmann",
+    "email": "k.hoffmann@datavault.de",
+    "designation": "VP Engineering",
+    "department": "Engineering",
+    "seniority": "VP",
+    "phone": "+49-30-5555-0106",
+    "linkedin_url": "https://linkedin.com/in/klaushoffmann"
+  },
+  {
+    "first_name": "Yuki",
+    "last_name": "Tanaka",
+    "email": "yuki.tanaka@quantumleapai.com",
+    "designation": "Chief Product Officer",
+    "department": "Product",
+    "seniority": "C_LEVEL",
+    "phone": null,
+    "linkedin_url": "https://linkedin.com/in/yukitanaka-cpo"
+  },
+  {
+    "first_name": "Fiona",
+    "last_name": "MacLeod",
+    "email": "f.macleod@finsecure.co.uk",
+    "designation": "Head of Compliance",
+    "department": "Legal & Compliance",
+    "seniority": "DIRECTOR",
+    "phone": "+44-131-555-0108",
+    "linkedin_url": "https://linkedin.com/in/fionamacleod"
+  },
+  {
+    "first_name": "Rahul",
+    "last_name": "Gupta",
+    "email": "rahul.gupta@careconnect.in",
+    "designation": "VP Sales & Partnerships",
+    "department": "Sales",
+    "seniority": "VP",
+    "phone": "+91-80-5555-0109",
+    "linkedin_url": "https://linkedin.com/in/rahulgupta-vp"
+  },
+  {
+    "first_name": "Emma",
+    "last_name": "Larson",
+    "email": "emma.larson@retailboost.io",
+    "designation": "CEO & Co-Founder",
+    "department": "Executive",
+    "seniority": "C_LEVEL",
+    "phone": "+1-604-555-0110",
+    "linkedin_url": "https://linkedin.com/in/emmalarson-founder"
+  },
+  {
+    "first_name": "Hans",
+    "last_name": "Becker",
+    "email": "h.becker@engineeredge.de",
+    "designation": "Director of Engineering",
+    "department": "Engineering",
+    "seniority": "DIRECTOR",
+    "phone": "+49-89-5555-0111",
+    "linkedin_url": null
+  },
+  {
+    "first_name": "Monica",
+    "last_name": "Rivera",
+    "email": "m.rivera@nexahealth.com",
+    "designation": "Chief Operating Officer",
+    "department": "Executive",
+    "seniority": "C_LEVEL",
+    "phone": "+1-312-555-0112",
+    "linkedin_url": "https://linkedin.com/in/monicarivera-coo"
+  },
+  {
+    "first_name": "Derek",
+    "last_name": "Thompson",
+    "email": "d.thompson@creditwiseanalytics.com",
+    "designation": "VP of Data Science",
+    "department": "Data & Analytics",
+    "seniority": "VP",
+    "phone": "+1-704-555-0113",
+    "linkedin_url": "https://linkedin.com/in/derekthompson-ds"
+  },
+  {
+    "first_name": "Aisha",
+    "last_name": "Patel",
+    "email": "aisha.patel@taskflowsaas.com",
+    "designation": "Product Manager",
+    "department": "Product",
+    "seniority": "MANAGER",
+    "phone": null,
+    "linkedin_url": "https://linkedin.com/in/aishapatel-pm"
+  },
+  {
+    "first_name": "Brian",
+    "last_name": "Nakamura",
+    "email": "brian.nakamura@globaltechconsulting.com",
+    "designation": "Director of Cloud Practice",
+    "department": "Delivery",
+    "seniority": "DIRECTOR",
+    "phone": "+1-206-555-0115",
+    "linkedin_url": "https://linkedin.com/in/briannakamura"
+  },
+  {
+    "first_name": "Charlotte",
+    "last_name": "Hughes",
+    "email": "c.hughes@edulearn.io",
+    "designation": "VP Marketing",
+    "department": "Marketing",
+    "seniority": "VP",
+    "phone": "+44-161-555-0116",
+    "linkedin_url": "https://linkedin.com/in/charlottehughes-mktg"
+  },
+  {
+    "first_name": "Ethan",
+    "last_name": "Bouchard",
+    "email": "e.bouchard@cloudflow.com",
+    "designation": "CTO & Co-Founder",
+    "department": "Engineering",
+    "seniority": "C_LEVEL",
+    "phone": "+1-514-555-0117",
+    "linkedin_url": "https://linkedin.com/in/ethanbouchard-cto"
+  },
+  {
+    "first_name": "Ingrid",
+    "last_name": "Schreiber",
+    "email": "i.schreiber@bionovaresearch.com",
+    "designation": "Director of Bioinformatics",
+    "department": "R&D",
+    "seniority": "DIRECTOR",
+    "phone": "+49-40-5555-0118",
+    "linkedin_url": null
+  },
+  {
+    "first_name": "Arjun",
+    "last_name": "Menon",
+    "email": "arjun.menon@datasyncsolutions.io",
+    "designation": "Engineering Manager",
+    "department": "Engineering",
+    "seniority": "MANAGER",
+    "phone": "+91-22-5555-0119",
+    "linkedin_url": "https://linkedin.com/in/arjunmenon-eng"
+  },
+  {
+    "first_name": "Sarah",
+    "last_name": "Kimani",
+    "email": "s.kimani@supplychainai.com",
+    "designation": "Chief Revenue Officer",
+    "department": "Sales",
+    "seniority": "C_LEVEL",
+    "phone": "+1-214-555-0120",
+    "linkedin_url": "https://linkedin.com/in/sarahkimani-cro"
+  },
+  {
+    "first_name": "Tom",
+    "last_name": "Edwards",
+    "email": "tom.edwards@cloudifysolutions.com",
+    "designation": "Senior Software Engineer",
+    "department": "Engineering",
+    "seniority": "INDIVIDUAL",
+    "phone": null,
+    "linkedin_url": "https://linkedin.com/in/tomedwards-swe"
+  },
+  {
+    "first_name": "Natasha",
+    "last_name": "Ivanova",
+    "email": "n.ivanova@paystreamtech.io",
+    "designation": "Head of Product Design",
+    "department": "Product",
+    "seniority": "DIRECTOR",
+    "phone": "+44-20-5555-0122",
+    "linkedin_url": "https://linkedin.com/in/natashivanova-design"
+  },
+  {
+    "first_name": "Daniel",
+    "last_name": "Okafor",
+    "email": "d.okafor@medanalytics.com",
+    "designation": "Director of Partnerships",
+    "department": "Business Development",
+    "seniority": "DIRECTOR",
+    "phone": "+1-617-555-0123",
+    "linkedin_url": "https://linkedin.com/in/danielokafor"
+  },
+  {
+    "first_name": "Lucy",
+    "last_name": "Park",
+    "email": "lucy.park@shopnexus.com",
+    "designation": "VP of Engineering",
+    "department": "Engineering",
+    "seniority": "VP",
+    "phone": "+1-512-555-0124",
+    "linkedin_url": "https://linkedin.com/in/lucypark-vp"
+  },
+  {
+    "first_name": "Carlos",
+    "last_name": "Reyes",
+    "email": "carlos.reyes@brightpathconsulting.com",
+    "designation": "Senior Consultant",
+    "department": "Delivery",
+    "seniority": "INDIVIDUAL",
+    "phone": null,
+    "linkedin_url": null
+  },
+  {
+    "first_name": "Mia",
+    "last_name": "Fischer",
+    "email": "m.fischer@datavault.de",
+    "designation": "Head of Customer Success",
+    "department": "Customer Success",
+    "seniority": "DIRECTOR",
+    "phone": "+49-30-5555-0126",
+    "linkedin_url": "https://linkedin.com/in/miafischer-cs"
+  },
+  {
+    "first_name": "Oliver",
+    "last_name": "Grant",
+    "email": "o.grant@quantumleapai.com",
+    "designation": "Machine Learning Engineer",
+    "department": "Engineering",
+    "seniority": "INDIVIDUAL",
+    "phone": null,
+    "linkedin_url": "https://linkedin.com/in/olivergrant-ml"
+  },
+  {
+    "first_name": "Amara",
+    "last_name": "Diallo",
+    "email": "a.diallo@finsecure.co.uk",
+    "designation": "VP of Sales",
+    "department": "Sales",
+    "seniority": "VP",
+    "phone": "+44-131-555-0128",
+    "linkedin_url": "https://linkedin.com/in/amaradiallo-sales"
+  },
+  {
+    "first_name": "Vikram",
+    "last_name": "Nair",
+    "email": "vikram.nair@careconnect.in",
+    "designation": "Engineering Manager",
+    "department": "Engineering",
+    "seniority": "MANAGER",
+    "phone": "+91-80-5555-0129",
+    "linkedin_url": "https://linkedin.com/in/vikramnair-mgr"
+  },
+  {
+    "first_name": "Hannah",
+    "last_name": "Scott",
+    "email": "h.scott@retailboost.io",
+    "designation": "Growth Marketing Manager",
+    "department": "Marketing",
+    "seniority": "MANAGER",
+    "phone": "+1-604-555-0130",
+    "linkedin_url": null
+  },
+  {
+    "first_name": "Frederik",
+    "last_name": "Braun",
+    "email": "f.braun@engineeredge.de",
+    "designation": "Principal Engineer",
+    "department": "Engineering",
+    "seniority": "INDIVIDUAL",
+    "phone": "+49-89-5555-0131",
+    "linkedin_url": "https://linkedin.com/in/frederikbraun"
+  },
+  {
+    "first_name": "Jasmine",
+    "last_name": "Wade",
+    "email": "j.wade@nexahealth.com",
+    "designation": "Director of Clinical Informatics",
+    "department": "Clinical",
+    "seniority": "DIRECTOR",
+    "phone": "+1-312-555-0132",
+    "linkedin_url": "https://linkedin.com/in/jasminewade-clinical"
+  },
+  {
+    "first_name": "Andrew",
+    "last_name": "Foster",
+    "email": "a.foster@creditwiseanalytics.com",
+    "designation": "VP of Product",
+    "department": "Product",
+    "seniority": "VP",
+    "phone": "+1-704-555-0133",
+    "linkedin_url": "https://linkedin.com/in/andrewfoster-product"
+  },
+  {
+    "first_name": "Neha",
+    "last_name": "Kapoor",
+    "email": "neha.kapoor@taskflowsaas.com",
+    "designation": "Full Stack Developer",
+    "department": "Engineering",
+    "seniority": "INDIVIDUAL",
+    "phone": null,
+    "linkedin_url": "https://linkedin.com/in/nehakapoor-dev"
+  },
+  {
+    "first_name": "Robert",
+    "last_name": "Steele",
+    "email": "r.steele@globaltechconsulting.com",
+    "designation": "VP of Partnerships",
+    "department": "Business Development",
+    "seniority": "VP",
+    "phone": "+1-206-555-0135",
+    "linkedin_url": "https://linkedin.com/in/robertsteele-biz"
+  },
+  {
+    "first_name": "Isabelle",
+    "last_name": "Dupont",
+    "email": "i.dupont@edulearn.io",
+    "designation": "Head of Content & Curriculum",
+    "department": "Product",
+    "seniority": "DIRECTOR",
+    "phone": "+44-161-555-0136",
+    "linkedin_url": null
+  },
+  {
+    "first_name": "Kevin",
+    "last_name": "Marcotte",
+    "email": "k.marcotte@cloudflow.com",
+    "designation": "Director of Customer Success",
+    "department": "Customer Success",
+    "seniority": "DIRECTOR",
+    "phone": "+1-514-555-0137",
+    "linkedin_url": "https://linkedin.com/in/kevinmarcotte-cs"
+  },
+  {
+    "first_name": "Lena",
+    "last_name": "Wolff",
+    "email": "l.wolff@bionovaresearch.com",
+    "designation": "Head of R&D Operations",
+    "department": "R&D",
+    "seniority": "DIRECTOR",
+    "phone": "+49-40-5555-0138",
+    "linkedin_url": "https://linkedin.com/in/lenawolff-rd"
+  },
+  {
+    "first_name": "Sanjay",
+    "last_name": "Rao",
+    "email": "sanjay.rao@datasyncsolutions.io",
+    "designation": "Senior Data Engineer",
+    "department": "Engineering",
+    "seniority": "INDIVIDUAL",
+    "phone": "+91-22-5555-0139",
+    "linkedin_url": null
+  },
+  {
+    "first_name": "Angela",
+    "last_name": "Pierce",
+    "email": "a.pierce@supplychainai.com",
+    "designation": "VP of Customer Success",
+    "department": "Customer Success",
+    "seniority": "VP",
+    "phone": "+1-214-555-0140",
+    "linkedin_url": "https://linkedin.com/in/angelapierce-cs"
+  },
+  {
+    "first_name": "David",
+    "last_name": "Cohen",
+    "email": "david.cohen@cloudifysolutions.com",
+    "designation": "Head of Sales Development",
+    "department": "Sales",
+    "seniority": "MANAGER",
+    "phone": "+1-415-555-0141",
+    "linkedin_url": "https://linkedin.com/in/davidcohen-sdr"
+  },
+  {
+    "first_name": "Rachel",
+    "last_name": "Morrison",
+    "email": "r.morrison@paystreamtech.io",
+    "designation": "Product Manager",
+    "department": "Product",
+    "seniority": "MANAGER",
+    "phone": null,
+    "linkedin_url": "https://linkedin.com/in/rachelmorrison-pm"
+  },
+  {
+    "first_name": "Patrick",
+    "last_name": "Nguyen",
+    "email": "p.nguyen@medanalytics.com",
+    "designation": "Chief Financial Officer",
+    "department": "Finance",
+    "seniority": "C_LEVEL",
+    "phone": "+1-617-555-0143",
+    "linkedin_url": "https://linkedin.com/in/patricknguyen-cfo"
+  },
+  {
+    "first_name": "Grace",
+    "last_name": "Osei",
+    "email": "g.osei@shopnexus.com",
+    "designation": "Marketing Manager",
+    "department": "Marketing",
+    "seniority": "MANAGER",
+    "phone": "+1-512-555-0144",
+    "linkedin_url": null
+  },
+  {
+    "first_name": "Michael",
+    "last_name": "Kuhn",
+    "email": "m.kuhn@datavault.de",
+    "designation": "Solutions Architect",
+    "department": "Engineering",
+    "seniority": "INDIVIDUAL",
+    "phone": "+49-30-5555-0145",
+    "linkedin_url": "https://linkedin.com/in/michaelkuhn-sa"
+  },
+  {
+    "first_name": "Victoria",
+    "last_name": "Adams",
+    "email": "v.adams@nexahealth.com",
+    "designation": "VP of Sales",
+    "department": "Sales",
+    "seniority": "VP",
+    "phone": "+1-312-555-0146",
+    "linkedin_url": "https://linkedin.com/in/victoriaadams-sales"
+  },
+  {
+    "first_name": "Ravi",
+    "last_name": "Krishnamurthy",
+    "email": "ravi.k@careconnect.in",
+    "designation": "Head of Platform Engineering",
+    "department": "Engineering",
+    "seniority": "DIRECTOR",
+    "phone": "+91-80-5555-0147",
+    "linkedin_url": "https://linkedin.com/in/ravikrishnamurthy"
+  },
+  {
+    "first_name": "Elena",
+    "last_name": "Vasquez",
+    "email": "e.vasquez@supplychainai.com",
+    "designation": "Director of Data Engineering",
+    "department": "Data & Analytics",
+    "seniority": "DIRECTOR",
+    "phone": "+1-214-555-0148",
+    "linkedin_url": "https://linkedin.com/in/elenavasquez-data"
+  },
+  {
+    "first_name": "Tobias",
+    "last_name": "Lange",
+    "email": "t.lange@bionovaresearch.com",
+    "designation": "Senior Research Scientist",
+    "department": "R&D",
+    "seniority": "INDIVIDUAL",
+    "phone": null,
+    "linkedin_url": "https://linkedin.com/in/tobiaslange-sci"
+  },
+  {
+    "first_name": "Jennifer",
+    "last_name": "Walsh",
+    "email": "j.walsh@globaltechconsulting.com",
+    "designation": "VP of Finance",
+    "department": "Finance",
+    "seniority": "VP",
+    "phone": "+1-206-555-0150",
+    "linkedin_url": "https://linkedin.com/in/jenniferwalsh-finance"
+  }
+]
