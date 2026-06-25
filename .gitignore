@@ -1,0 +1,56 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+
+# Virtualenvs
+.venv/
+venv/
+ENV/
+
+# Environment
+.env
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# OS
+.DS_Store
+*.swp
+*.swo
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Node (frontend)
+node_modules/
+.next/
+.nuxt/
+
+# Database
+*.db
+*.sqlite3
+
+# Docker
+docker-compose.override.yml
+
+# Alembic
+*.pyc
