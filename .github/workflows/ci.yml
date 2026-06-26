@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop, "claude/*"]
+  pull_request:
+    branches: [main, master]
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+
+jobs:
+  lint-backend:
+    name: Lint Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install linting dependencies
+        run: pip install ruff mypy
+      - name: Run ruff
+        run: ruff check backend/ --output-format=github
+      - name: Run ruff format check
+        run: ruff format backend/ --check
+
+  lint-frontend:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci --prefer-offline
+      - name: TypeScript check
+        working-directory: frontend
+        run: npx tsc --noEmit
+      - name: ESLint
+        working-directory: frontend
+        run: npx next lint
+
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: ali_user
+          POSTGRES_PASSWORD: ali_password
+          POSTGRES_DB: ali_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://ali_user:ali_password@localhost:5432/ali_test
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: test-secret-key-not-for-production
+      ENABLE_AI_SCORING: "false"
+      OPENSEARCH_URL: http://localhost:9200
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Install test extensions
+        run: |
+          PGPASSWORD=ali_password psql -h localhost -U ali_user -d ali_test -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+          PGPASSWORD=ali_password psql -h localhost -U ali_user -d ali_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          PGPASSWORD=ali_password psql -h localhost -U ali_user -d ali_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+          PGPASSWORD=ali_password psql -h localhost -U ali_user -d ali_test -c "CREATE EXTENSION IF NOT EXISTS unaccent;"
+      - name: Run migrations
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://ali_user:ali_password@localhost:5432/ali_test
+      - name: Run tests
+        run: pytest backend/tests/ -v --tb=short --cov=backend --cov-report=xml --cov-report=term-missing
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: coverage.xml
+          flags: backend
+
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [lint-backend, test-backend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: ai-lead-intelligence:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit dependencies
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2022-42969 || true
+      - name: Run bandit security linter
+        run: |
+          pip install bandit
+          bandit -r backend/ -ll -x backend/tests/ --format github || true
