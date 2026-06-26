@@ -1,79 +1,97 @@
+"""Alembic migration environment - async with multi-schema support."""
+from __future__ import annotations
 import asyncio
 from logging.config import fileConfig
-from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
-from alembic import context
 
-# Import all models to register them with the metadata
-from backend.app.common.base import Base  # noqa: F401
-from backend.app.organizations.models import Organization  # noqa: F401
-from backend.app.users.models import User, Role, Permission, APIKey, RefreshToken  # noqa: F401
-from backend.app.common.reference import Industry, Country, State, City, Technology  # noqa: F401
-from backend.app.companies.models import Company, CompanySocialProfile, CompanyTechnology  # noqa: F401
-from backend.app.contacts.models import Contact, ContactSocialProfile  # noqa: F401
-from backend.app.search.models import Search, SearchResult, SavedSearch  # noqa: F401
-from backend.app.ai.models import LeadScore  # noqa: F401
-from backend.app.enrichment.models import EmailVerification  # noqa: F401
-from backend.app.crm.models import (  # noqa: F401
-    Tag, ContactTag, CompanyTag, Activity, Note,
-    CRMPipeline, CRMPipelineStage, CRMDeal, CRMTask,
-    LeadList, LeadListContact,
-)
-from backend.app.notifications.models import Notification  # noqa: F401
-from backend.app.exports.models import Export, ImportJob  # noqa: F401
-from backend.app.integrations.models import ConnectorConfig, ConnectorJob  # noqa: F401
-from backend.app.billing.models import Subscription, CreditTransaction  # noqa: F401
-from backend.app.admin.models import AuditLog, SystemSetting, FeatureFlag, Workflow, WorkflowExecution  # noqa: F401
+from alembic import context
+from sqlalchemy import pool, text
+from sqlalchemy.ext.asyncio import async_engine_from_config
+
+from backend.app.common.base import Base
+from backend.config import get_settings
+
+# Import all models so their metadata is registered
+from backend.app.organizations.models import *  # noqa: F401, F403
+from backend.app.users.models import *  # noqa: F401, F403
+from backend.app.companies.models import *  # noqa: F401, F403
+from backend.app.contacts.models import *  # noqa: F401, F403
+from backend.app.search.models import *  # noqa: F401, F403
+from backend.app.ai.models import *  # noqa: F401, F403
+from backend.app.crm.models import *  # noqa: F401, F403
+from backend.app.enrichment.models import *  # noqa: F401, F403
+from backend.app.billing.models import *  # noqa: F401, F403
+from backend.app.notifications.models import *  # noqa: F401, F403
+from backend.app.exports.models import *  # noqa: F401, F403
+from backend.app.integrations.models import *  # noqa: F401, F403
+from backend.app.admin.models import *  # noqa: F401, F403
 
 config = context.config
+settings = get_settings()
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
+# All schemas Alembic should track
+SCHEMAS = [
+    "public", "auth", "core", "crm", "search", "ai", "analytics",
+    "connector", "audit", "billing", "notification", "system",
+    "enrichment", "export",
+]
 
-def get_url():
-    from backend.config import settings
-    return settings.DATABASE_URL
+
+def include_object(object, name, type_, reflected, compare_to):
+    """Include all objects from all tracked schemas."""
+    if type_ == "table":
+        return True
+    return True
 
 
 def run_migrations_offline() -> None:
-    url = get_url()
+    url = settings.DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=True,
-        compare_server_default=True,
-    )
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-def do_run_migrations(connection: Connection) -> None:
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata,
-        compare_type=True,
-        compare_server_default=True,
+        include_schemas=True,
+        version_table_schema="public",
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 async def run_async_migrations() -> None:
-    configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = get_url()
+    config_section = config.get_section(config.config_ini_section, {})
+    config_section["sqlalchemy.url"] = settings.DATABASE_URL
+
     connectable = async_engine_from_config(
-        configuration,
+        config_section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+
     async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
+        # Set search_path so Alembic can resolve cross-schema FK references
+        search_path = ", ".join(SCHEMAS)
+        await connection.execute(text(f"SET search_path TO {search_path}"))
+
+        await connection.run_sync(
+            lambda conn: context.configure(
+                connection=conn,
+                target_metadata=target_metadata,
+                include_schemas=True,
+                version_table_schema="public",
+                include_object=include_object,
+                compare_type=True,
+                compare_server_default=True,
+            )
+        )
+        async with connection.begin():
+            await connection.run_sync(lambda conn: context.run_migrations())
+
     await connectable.dispose()
 
 
