@@ -1,102 +1,76 @@
-version: "3.9"
+version: '3.9'
 
 services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile
+      target: api
     ports:
       - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/ai_lead_intel
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/2
-      SECRET_KEY: dev-secret-key-change-in-production
-      ENVIRONMENT: development
-      DEBUG: "true"
+    env_file: .env
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app/backend
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+      - ./:/app
     restart: unless-stopped
 
   worker:
     build:
       context: .
-      dockerfile: Dockerfile
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/ai_lead_intel
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/2
-      SECRET_KEY: dev-secret-key-change-in-production
+      target: worker
+    env_file: .env
     depends_on:
-      - db
+      - postgres
       - redis
-    command: celery -A backend.workers.celery_app worker --loglevel=info --concurrency=4
     restart: unless-stopped
 
   beat:
     build:
       context: .
-      dockerfile: Dockerfile
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      target: beat
+    env_file: .env
     depends_on:
       - redis
-    command: celery -A backend.workers.celery_app beat --loglevel=info
     restart: unless-stopped
 
-  db:
+  postgres:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ai_lead_intel
+      POSTGRES_USER: ${DB_USER:-ailead}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ailead}
+      POSTGRES_DB: ${DB_NAME:-ailead}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/phase2/00_init.sql:/docker-entrypoint-initdb.d/00_init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ailead"]
+      interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    volumes:
-      - redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 5
-    restart: unless-stopped
 
   opensearch:
-    image: opensearchproject/opensearch:2.17.0
+    image: opensearchproject/opensearch:2.17.1
     environment:
-      - discovery.type=single-node
-      - plugins.security.disabled=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: 'true'
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
     ports:
       - "9200:9200"
-    volumes:
-      - opensearch_data:/usr/share/opensearch/data
-    restart: unless-stopped
 
 volumes:
   pgdata:
-  redisdata:
-  opensearch_data:
