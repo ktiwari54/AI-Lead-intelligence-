@@ -1,0 +1,14 @@
+# Global owners
+* @ktiwari54
+
+# Backend
+backend/ @ktiwari54
+backend/migrations/ @ktiwari54
+
+# Frontend
+frontend/ @ktiwari54
+
+# CI/CD
+.github/ @ktiwari54
+Dockerfile @ktiwari54
+docker-compose.yml @ktiwari54

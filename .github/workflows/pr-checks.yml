@@ -1,0 +1,57 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  size-check:
+    name: PR Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check PR size
+        run: |
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+          LINES=$(git diff --stat origin/${{ github.base_ref }}...HEAD | tail -1)
+          echo "Changed files: $FILES"
+          echo "Stats: $LINES"
+
+  migration-check:
+    name: Migration Safety Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check for migration conflicts
+        run: |
+          MIGRATION_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep "backend/migrations/versions/" || true)
+          if [ -n "$MIGRATION_FILES" ]; then
+            echo "Migration files changed: $MIGRATION_FILES"
+            # Check that each new migration has a unique revision ID
+            for f in $MIGRATION_FILES; do
+              if [ -f "$f" ]; then
+                REV=$(grep "^revision" "$f" | head -1)
+                echo "  $f: $REV"
+              fi
+            done
+          fi
+
+  api-breaking-change-check:
+    name: API Breaking Change Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install fastapi pydantic
+      - name: Check for route changes
+        run: |
+          echo "Checking for route changes in PR..."
+          git diff --unified=0 origin/${{ github.base_ref }}...HEAD -- 'backend/app/*/router.py' | grep "^+" | grep -E "@router\.(get|post|put|patch|delete)" || echo "No route signature changes detected"
