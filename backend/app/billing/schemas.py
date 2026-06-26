@@ -1,12 +1,12 @@
-"""Pydantic schemas for billing endpoints."""
+from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
-
 from pydantic import BaseModel
 
 
 class SubscriptionResponse(BaseModel):
+    model_config = {"from_attributes": True}
     id: UUID
     organization_id: UUID
     plan: str
@@ -19,8 +19,6 @@ class SubscriptionResponse(BaseModel):
     trial_ends_at: datetime | None = None
     stripe_customer_id: str | None = None
 
-    model_config = {"from_attributes": True}
-
 
 class CreateSubscriptionRequest(BaseModel):
     plan: Literal["FREE", "STARTER", "PRO", "ENTERPRISE"] = "FREE"
@@ -32,6 +30,7 @@ class ChangePlanRequest(BaseModel):
 
 
 class CreditTransactionResponse(BaseModel):
+    model_config = {"from_attributes": True}
     id: UUID
     amount: int
     transaction_type: str
@@ -41,13 +40,16 @@ class CreditTransactionResponse(BaseModel):
     entity_type: str | None = None
     created_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class CreditBalanceResponse(BaseModel):
     credits_remaining: int
     credits_monthly: int
     plan: str
+
+
+class AddCreditsRequest(BaseModel):
+    amount: int
+    description: str = "Manual adjustment"
 
 
 class BillingPortalResponse(BaseModel):
