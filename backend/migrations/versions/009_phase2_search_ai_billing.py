@@ -1,514 +1,567 @@
-"""phase2_search_ai_billing: search, AI/ML, and billing schemas
+"""Phase 2: Search, AI, and Billing
 
 Revision ID: 009
 Revises: 008
-Create Date: 2026-01-01
+Create Date: 2024-01-09
 """
-from __future__ import annotations
 from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
-revision = "009"
-down_revision = "008"
+revision = '009'
+down_revision = '008'
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    # ═══════════════════════════════════════════════════════════
-    # SEARCH DOMAIN
-    # ═══════════════════════════════════════════════════════════
-
     op.execute("""
-        CREATE TABLE IF NOT EXISTS search.search_requests (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            user_id         UUID REFERENCES auth.users(id),
-            search_type     VARCHAR(50) NOT NULL DEFAULT 'company',  -- company, contact, combined
-            query           TEXT,
-            filters         JSONB NOT NULL DEFAULT '{}',
-            sort_field      VARCHAR(100),
-            sort_direction  VARCHAR(10) NOT NULL DEFAULT 'desc',
-            page            INTEGER NOT NULL DEFAULT 1,
-            page_size       INTEGER NOT NULL DEFAULT 25,
-            result_count    INTEGER,
-            total_count     INTEGER,
-            execution_ms    INTEGER,
-            is_cached       BOOLEAN NOT NULL DEFAULT FALSE,
-            cache_key       VARCHAR(255),
-            source          VARCHAR(50) NOT NULL DEFAULT 'ui',  -- ui, api, scheduled
-            session_id      UUID,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        ) PARTITION BY RANGE (created_at)
-    """)
-    op.execute("CREATE TABLE search.search_requests_2026_06 PARTITION OF search.search_requests FOR VALUES FROM ('2026-06-01') TO ('2026-07-01')")
-    op.execute("CREATE TABLE search.search_requests_2026_07 PARTITION OF search.search_requests FOR VALUES FROM ('2026-07-01') TO ('2026-08-01')")
-    op.execute("CREATE TABLE search.search_requests_future PARTITION OF search.search_requests FOR VALUES FROM ('2026-08-01') TO ('2030-01-01')")
-    op.execute("CREATE INDEX idx_search_req_org ON search.search_requests(organization_id, created_at DESC)")
-    op.execute("CREATE INDEX idx_search_req_user ON search.search_requests(user_id, created_at DESC)")
-    op.execute("CREATE INDEX idx_search_req_filters ON search.search_requests USING GIN(filters)")
+    -- ============================================================
+    -- SEARCH SCHEMA
+    -- ============================================================
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS search.search_filters (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            search_id       UUID NOT NULL,  -- references search_requests.id (partitioned)
-            filter_group    VARCHAR(50) NOT NULL,
-            filter_key      VARCHAR(100) NOT NULL,
-            filter_operator VARCHAR(50) NOT NULL DEFAULT 'eq',  -- eq, neq, gt, lt, gte, lte, in, contains
-            filter_value    JSONB NOT NULL,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
-    op.execute("CREATE INDEX idx_search_filters_search ON search.search_filters(search_id)")
+    CREATE TABLE IF NOT EXISTS search.search_requests (
+        id              UUID NOT NULL DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        user_id         UUID REFERENCES auth.users(id),
+        search_type     TEXT NOT NULL DEFAULT 'company',
+        query           TEXT,
+        filters         JSONB NOT NULL DEFAULT '{}',
+        sort_by         TEXT,
+        sort_dir        TEXT DEFAULT 'desc',
+        page            INTEGER NOT NULL DEFAULT 1,
+        page_size       INTEGER NOT NULL DEFAULT 25,
+        result_count    INTEGER,
+        execution_ms    INTEGER,
+        cache_hit       BOOLEAN NOT NULL DEFAULT FALSE,
+        credits_used    INTEGER NOT NULL DEFAULT 0,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (id, created_at)
+    ) PARTITION BY RANGE (created_at);
+    SELECT create_monthly_partition('search.search_requests', NOW());
+    SELECT create_monthly_partition('search.search_requests', NOW() + INTERVAL '1 month');
+    CREATE INDEX IF NOT EXISTS idx_search_requests_filters ON search.search_requests USING GIN(filters);
+    CREATE INDEX IF NOT EXISTS idx_search_requests_org ON search.search_requests(organization_id, created_at DESC);
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS search.search_results (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            search_id       UUID NOT NULL,
-            result_type     VARCHAR(50) NOT NULL,  -- company, contact
-            result_id       UUID NOT NULL,
-            rank            INTEGER,
-            score           NUMERIC(10,6),
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        ) PARTITION BY RANGE (created_at)
-    """)
-    op.execute("CREATE TABLE search.search_results_2026_06 PARTITION OF search.search_results FOR VALUES FROM ('2026-06-01') TO ('2026-07-01')")
-    op.execute("CREATE TABLE search.search_results_future PARTITION OF search.search_results FOR VALUES FROM ('2026-07-01') TO ('2030-01-01')")
-    op.execute("CREATE INDEX idx_search_results_search ON search.search_results(search_id)")
-    op.execute("CREATE INDEX idx_search_results_result ON search.search_results(result_type, result_id)")
+    CREATE TABLE IF NOT EXISTS search.search_filters (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        name            TEXT NOT NULL,
+        filter_type     TEXT NOT NULL,
+        filter_operator TEXT NOT NULL CHECK (filter_operator IN ('eq','neq','gt','lt','gte','lte','in','nin','contains','not_contains','between')),
+        display_label   TEXT,
+        is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+        sort_order      INTEGER NOT NULL DEFAULT 0,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS search.saved_searches (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-            name            VARCHAR(255) NOT NULL,
-            description     TEXT,
-            search_type     VARCHAR(50) NOT NULL DEFAULT 'company',
-            query           TEXT,
-            filters         JSONB NOT NULL DEFAULT '{}',
-            sort_field      VARCHAR(100),
-            sort_direction  VARCHAR(10) NOT NULL DEFAULT 'desc',
-            is_shared       BOOLEAN NOT NULL DEFAULT FALSE,
-            alert_enabled   BOOLEAN NOT NULL DEFAULT FALSE,
-            alert_frequency VARCHAR(20),   -- daily, weekly
-            last_run_at     TIMESTAMPTZ,
-            last_result_count INTEGER,
-            run_count       INTEGER NOT NULL DEFAULT 0,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            deleted_at      TIMESTAMPTZ,
-            version         INTEGER NOT NULL DEFAULT 1,
-            status          VARCHAR(50) NOT NULL DEFAULT 'active',
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
-    op.execute("CREATE INDEX idx_saved_searches_user ON search.saved_searches(user_id, organization_id) WHERE deleted_at IS NULL")
-    op.execute("CREATE INDEX idx_saved_searches_filters ON search.saved_searches USING GIN(filters)")
+    CREATE TABLE IF NOT EXISTS search.saved_searches (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        user_id         UUID REFERENCES auth.users(id),
+        name            TEXT NOT NULL,
+        search_type     TEXT NOT NULL DEFAULT 'company',
+        query           TEXT,
+        filters         JSONB NOT NULL DEFAULT '{}',
+        sort_by         TEXT,
+        sort_dir        TEXT DEFAULT 'desc',
+        alert_enabled   BOOLEAN NOT NULL DEFAULT FALSE,
+        alert_frequency TEXT,
+        last_alerted_at TIMESTAMPTZ,
+        is_shared       BOOLEAN NOT NULL DEFAULT FALSE,
+        use_count       INTEGER NOT NULL DEFAULT 0,
+        last_used_at    TIMESTAMPTZ,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS search.scheduled_searches (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            saved_search_id UUID NOT NULL REFERENCES search.saved_searches(id) ON DELETE CASCADE,
-            frequency       VARCHAR(20) NOT NULL DEFAULT 'daily',
-            cron_expression VARCHAR(100),
-            next_run_at     TIMESTAMPTZ,
-            last_run_at     TIMESTAMPTZ,
-            last_run_status VARCHAR(50),
-            is_active       BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version         INTEGER NOT NULL DEFAULT 1,
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS search.scheduled_searches (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        saved_search_id UUID NOT NULL REFERENCES search.saved_searches(id) ON DELETE CASCADE,
+        cron_expression TEXT NOT NULL,
+        next_run_at     TIMESTAMPTZ NOT NULL,
+        last_run_at     TIMESTAMPTZ,
+        last_result_count INTEGER,
+        is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1
+    );
+    CREATE INDEX IF NOT EXISTS idx_scheduled_searches_next_run ON search.scheduled_searches(next_run_at) WHERE is_active = TRUE;
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS search.search_cache (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            cache_key       VARCHAR(255) NOT NULL UNIQUE,
-            organization_id UUID REFERENCES auth.organizations(id),
-            search_type     VARCHAR(50),
-            query_hash      VARCHAR(64) NOT NULL,
-            result_count    INTEGER,
-            results         JSONB NOT NULL DEFAULT '[]',
-            hit_count       INTEGER NOT NULL DEFAULT 0,
-            expires_at      TIMESTAMPTZ NOT NULL,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
-    op.execute("CREATE INDEX idx_search_cache_key ON search.search_cache(cache_key)")
-    op.execute("CREATE INDEX idx_search_cache_expires ON search.search_cache(expires_at)")
+    CREATE TABLE IF NOT EXISTS search.search_cache (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        cache_key       TEXT NOT NULL,
+        search_type     TEXT NOT NULL,
+        query_hash      TEXT NOT NULL,
+        result_data     JSONB NOT NULL DEFAULT '{}',
+        result_count    INTEGER NOT NULL DEFAULT 0,
+        expires_at      TIMESTAMPTZ NOT NULL,
+        hit_count       INTEGER NOT NULL DEFAULT 0,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(cache_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_search_cache_expires ON search.search_cache(expires_at);
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS search.search_statistics (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            period_date     DATE NOT NULL,
-            search_type     VARCHAR(50) NOT NULL,
-            total_searches  INTEGER NOT NULL DEFAULT 0,
-            unique_queries  INTEGER NOT NULL DEFAULT 0,
-            avg_result_count NUMERIC(10,2),
-            avg_execution_ms NUMERIC(10,2),
-            cache_hits      INTEGER NOT NULL DEFAULT 0,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            UNIQUE(organization_id, period_date, search_type)
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS search.search_statistics (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        period_date     DATE NOT NULL,
+        search_type     TEXT NOT NULL,
+        total_searches  INTEGER NOT NULL DEFAULT 0,
+        unique_queries  INTEGER NOT NULL DEFAULT 0,
+        cache_hits      INTEGER NOT NULL DEFAULT 0,
+        avg_results     NUMERIC(10,2),
+        avg_exec_ms     NUMERIC(10,2),
+        credits_used    INTEGER NOT NULL DEFAULT 0,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(organization_id, period_date, search_type)
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS search.query_embeddings (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            query_text      TEXT NOT NULL,
-            query_hash      VARCHAR(64) NOT NULL,
-            embedding       vector(1536),
-            model           VARCHAR(100) NOT NULL DEFAULT 'text-embedding-3-small',
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            expires_at      TIMESTAMPTZ,
-            UNIQUE(organization_id, query_hash)
-        )
-    """)
-    op.execute("CREATE INDEX idx_query_embeddings_hnsw ON search.query_embeddings USING hnsw(embedding vector_cosine_ops) WHERE embedding IS NOT NULL")
+    CREATE TABLE IF NOT EXISTS search.query_embeddings (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        query_hash      TEXT NOT NULL,
+        query_text      TEXT NOT NULL,
+        embedding       vector(1536),
+        model           TEXT NOT NULL DEFAULT 'text-embedding-3-small',
+        use_count       INTEGER NOT NULL DEFAULT 1,
+        last_used_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(organization_id, query_hash)
+    );
+    CREATE INDEX IF NOT EXISTS idx_query_embeddings_hnsw ON search.query_embeddings
+        USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 
-    # ═══════════════════════════════════════════════════════════
-    # AI DOMAIN
-    # ═══════════════════════════════════════════════════════════
+    -- ============================================================
+    -- AI SCHEMA
+    -- ============================================================
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS ai.ai_models (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            name            VARCHAR(255) NOT NULL,
-            version         VARCHAR(50) NOT NULL,
-            provider        VARCHAR(100) NOT NULL,  -- openai, anthropic, custom
-            model_type      VARCHAR(100) NOT NULL,  -- embedding, scoring, classification, generation
-            endpoint        VARCHAR(500),
-            input_dims      INTEGER,
-            output_dims     INTEGER,
-            max_tokens      INTEGER,
-            cost_per_token  NUMERIC(10,8),
-            is_active       BOOLEAN NOT NULL DEFAULT TRUE,
-            is_default      BOOLEAN NOT NULL DEFAULT FALSE,
-            config          JSONB NOT NULL DEFAULT '{}',
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version_num     INTEGER NOT NULL DEFAULT 1,
-            status          VARCHAR(50) NOT NULL DEFAULT 'active',
-            metadata        JSONB NOT NULL DEFAULT '{}',
-            UNIQUE(name, version)
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS ai.ai_models (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID,
+        provider        TEXT NOT NULL,
+        model_id        TEXT NOT NULL UNIQUE,
+        model_type      TEXT NOT NULL CHECK (model_type IN ('embedding','completion','scoring','classification')),
+        display_name    TEXT NOT NULL,
+        input_dims      INTEGER,
+        output_dims     INTEGER,
+        max_tokens      INTEGER,
+        cost_per_token  NUMERIC(12, 8),
+        config          JSONB NOT NULL DEFAULT '{}',
+        is_default      BOOLEAN NOT NULL DEFAULT FALSE,
+        is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS ai.embeddings (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            entity_type     VARCHAR(50) NOT NULL,   -- company, contact, note, search
-            entity_id       UUID NOT NULL,
-            model_id        UUID REFERENCES ai.ai_models(id),
-            model_name      VARCHAR(100) NOT NULL DEFAULT 'text-embedding-3-small',
-            embedding       vector(1536) NOT NULL,
-            text_hash       VARCHAR(64),
-            token_count     INTEGER,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version_num     INTEGER NOT NULL DEFAULT 1,
-            metadata        JSONB NOT NULL DEFAULT '{}',
-            UNIQUE(organization_id, entity_type, entity_id)
-        )
-    """)
-    op.execute("CREATE INDEX idx_embeddings_hnsw ON ai.embeddings USING hnsw(embedding vector_cosine_ops) WITH (m=16, ef_construction=64) WHERE embedding IS NOT NULL")
-    op.execute("CREATE INDEX idx_embeddings_entity ON ai.embeddings(entity_type, entity_id)")
-    op.execute("CREATE INDEX idx_embeddings_org ON ai.embeddings(organization_id, entity_type)")
+    CREATE TABLE IF NOT EXISTS ai.embeddings (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        entity_type     TEXT NOT NULL CHECK (entity_type IN ('company','contact','deal','note','search_query')),
+        entity_id       UUID NOT NULL,
+        embedding       vector(1536) NOT NULL,
+        model_id        TEXT NOT NULL DEFAULT 'text-embedding-3-small',
+        checksum        TEXT,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(organization_id, entity_type, entity_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_embeddings_hnsw ON ai.embeddings
+        USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS ai.lead_scores (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            entity_type     VARCHAR(50) NOT NULL,   -- company, contact
-            entity_id       UUID NOT NULL,
-            company_id      UUID REFERENCES core.companies(id) ON DELETE SET NULL,
-            contact_id      UUID REFERENCES core.contacts(id) ON DELETE SET NULL,
-            model_id        UUID REFERENCES ai.ai_models(id),
-            model_used      VARCHAR(100),
-            overall_score   NUMERIC(5,2) NOT NULL,   -- 0-100
-            quality_score   NUMERIC(5,2),
-            fit_score       NUMERIC(5,2),
-            intent_score    NUMERIC(5,2),
-            engagement_score NUMERIC(5,2),
-            timing_score    NUMERIC(5,2),
-            score_breakdown JSONB NOT NULL DEFAULT '{}',
-            recommendation  VARCHAR(50),   -- hot, warm, cold, not_a_fit
-            reasoning       TEXT,
-            confidence      NUMERIC(5,2),
-            query_context   TEXT,
-            query_embedding vector(1536),
-            scored_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            expires_at      TIMESTAMPTZ,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version         INTEGER NOT NULL DEFAULT 1,
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
-    op.execute("CREATE INDEX idx_lead_scores_entity ON ai.lead_scores(entity_type, entity_id, organization_id)")
-    op.execute("CREATE INDEX idx_lead_scores_company ON ai.lead_scores(company_id, overall_score DESC)")
-    op.execute("CREATE INDEX idx_lead_scores_contact ON ai.lead_scores(contact_id, overall_score DESC)")
-    op.execute("CREATE INDEX idx_lead_scores_score ON ai.lead_scores(organization_id, overall_score DESC, recommendation)")
+    CREATE TABLE IF NOT EXISTS ai.lead_scores (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        entity_type     TEXT NOT NULL CHECK (entity_type IN ('company','contact')),
+        entity_id       UUID NOT NULL,
+        overall_score   INTEGER NOT NULL CHECK (overall_score BETWEEN 0 AND 100),
+        quality_score   INTEGER CHECK (quality_score BETWEEN 0 AND 100),
+        fit_score       INTEGER CHECK (fit_score BETWEEN 0 AND 100),
+        intent_score    INTEGER CHECK (intent_score BETWEEN 0 AND 100),
+        engagement_score INTEGER CHECK (engagement_score BETWEEN 0 AND 100),
+        timing_score    INTEGER CHECK (timing_score BETWEEN 0 AND 100),
+        recommendation  TEXT NOT NULL CHECK (recommendation IN ('hot','warm','cold','not_a_fit')),
+        score_reasons   JSONB NOT NULL DEFAULT '[]',
+        model_id        TEXT NOT NULL DEFAULT 'claude-haiku-4-5-20251001',
+        query_embedding vector(1536),
+        scored_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at      TIMESTAMPTZ,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(organization_id, entity_type, entity_id)
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS ai.recommendations (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            user_id         UUID REFERENCES auth.users(id),
-            rec_type        VARCHAR(50) NOT NULL,  -- similar_companies, next_best_action, at_risk
-            entity_type     VARCHAR(50) NOT NULL,
-            entity_id       UUID NOT NULL,
-            recommended_ids UUID[] NOT NULL DEFAULT '{}',
-            scores          JSONB NOT NULL DEFAULT '{}',
-            reasoning       TEXT,
-            model_used      VARCHAR(100),
-            accepted        BOOLEAN,
-            accepted_at     TIMESTAMPTZ,
-            dismissed       BOOLEAN NOT NULL DEFAULT FALSE,
-            dismissed_at    TIMESTAMPTZ,
-            expires_at      TIMESTAMPTZ,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version         INTEGER NOT NULL DEFAULT 1,
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
-    op.execute("CREATE INDEX idx_recommendations_entity ON ai.recommendations(entity_type, entity_id, organization_id)")
+    CREATE TABLE IF NOT EXISTS ai.recommendations (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id     UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        user_id             UUID REFERENCES auth.users(id),
+        recommendation_type TEXT NOT NULL,
+        entity_type         TEXT NOT NULL,
+        seed_entity_id      UUID,
+        recommended_ids     UUID[] NOT NULL DEFAULT '{}',
+        accepted_ids        UUID[] NOT NULL DEFAULT '{}',
+        dismissed_ids       UUID[] NOT NULL DEFAULT '{}',
+        model_id            TEXT NOT NULL DEFAULT 'claude-haiku-4-5-20251001',
+        expires_at          TIMESTAMPTZ,
+        status              TEXT NOT NULL DEFAULT 'active',
+        metadata            JSONB NOT NULL DEFAULT '{}',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at          TIMESTAMPTZ,
+        created_by          UUID,
+        updated_by          UUID,
+        version             INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS ai.duplicates (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            entity_type     VARCHAR(50) NOT NULL,
-            entity_id_a     UUID NOT NULL,
-            entity_id_b     UUID NOT NULL,
-            similarity      NUMERIC(5,4) NOT NULL,   -- 0.0000 - 1.0000
-            match_fields    TEXT[] NOT NULL DEFAULT '{}',
-            status          VARCHAR(50) NOT NULL DEFAULT 'pending',  -- pending, merged, dismissed
-            merged_into     UUID,
-            resolved_by     UUID REFERENCES auth.users(id),
-            resolved_at     TIMESTAMPTZ,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version         INTEGER NOT NULL DEFAULT 1,
-            metadata        JSONB NOT NULL DEFAULT '{}',
-            UNIQUE(organization_id, entity_type, entity_id_a, entity_id_b)
-        )
-    """)
-    op.execute("CREATE INDEX idx_duplicates_entity_a ON ai.duplicates(entity_type, entity_id_a)")
-    op.execute("CREATE INDEX idx_duplicates_status ON ai.duplicates(organization_id, status, entity_type)")
+    CREATE TABLE IF NOT EXISTS ai.duplicates (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        entity_type     TEXT NOT NULL CHECK (entity_type IN ('company','contact')),
+        entity_id_a     UUID NOT NULL,
+        entity_id_b     UUID NOT NULL,
+        similarity      NUMERIC(5,4) NOT NULL CHECK (similarity BETWEEN 0 AND 1),
+        match_fields    TEXT[] NOT NULL DEFAULT '{}',
+        resolution      TEXT CHECK (resolution IN ('merge','keep_both','ignore')),
+        resolved_by     UUID,
+        resolved_at     TIMESTAMPTZ,
+        status          TEXT NOT NULL DEFAULT 'pending',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(organization_id, entity_type, entity_id_a, entity_id_b)
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS ai.ai_predictions (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            prediction_type VARCHAR(100) NOT NULL,  -- churn_risk, upsell_potential, deal_close_probability
-            entity_type     VARCHAR(50) NOT NULL,
-            entity_id       UUID NOT NULL,
-            prediction      JSONB NOT NULL DEFAULT '{}',
-            probability     NUMERIC(5,4),
-            model_used      VARCHAR(100),
-            features_used   JSONB NOT NULL DEFAULT '{}',
-            valid_until     TIMESTAMPTZ,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version         INTEGER NOT NULL DEFAULT 1,
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
-    op.execute("CREATE INDEX idx_ai_predictions_entity ON ai.ai_predictions(entity_type, entity_id, organization_id)")
+    CREATE TABLE IF NOT EXISTS ai.ai_predictions (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id     UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        entity_type         TEXT NOT NULL,
+        entity_id           UUID NOT NULL,
+        prediction_type     TEXT NOT NULL CHECK (prediction_type IN ('churn_risk','upsell_potential','deal_close_probability','contact_response_rate')),
+        prediction_value    NUMERIC(8,4) NOT NULL,
+        confidence          NUMERIC(5,4) CHECK (confidence BETWEEN 0 AND 1),
+        model_id            TEXT NOT NULL DEFAULT 'claude-haiku-4-5-20251001',
+        feature_importance  JSONB NOT NULL DEFAULT '{}',
+        predicted_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at          TIMESTAMPTZ,
+        status              TEXT NOT NULL DEFAULT 'active',
+        metadata            JSONB NOT NULL DEFAULT '{}',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at          TIMESTAMPTZ,
+        created_by          UUID,
+        updated_by          UUID,
+        version             INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS ai.classification (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            entity_type     VARCHAR(50) NOT NULL,
-            entity_id       UUID NOT NULL,
-            classifier      VARCHAR(100) NOT NULL,  -- industry, intent, seniority
-            label           VARCHAR(255) NOT NULL,
-            confidence      NUMERIC(5,4) NOT NULL,
-            all_labels      JSONB NOT NULL DEFAULT '{}',
-            model_used      VARCHAR(100),
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version         INTEGER NOT NULL DEFAULT 1,
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS ai.classification (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        entity_type     TEXT NOT NULL,
+        entity_id       UUID NOT NULL,
+        classifier      TEXT NOT NULL,
+        label           TEXT NOT NULL,
+        confidence      NUMERIC(5,4) CHECK (confidence BETWEEN 0 AND 1),
+        all_labels      JSONB NOT NULL DEFAULT '{}',
+        model_id        TEXT NOT NULL DEFAULT 'claude-haiku-4-5-20251001',
+        classified_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS ai.intent_detection (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            company_id      UUID REFERENCES core.companies(id) ON DELETE SET NULL,
-            intent_type     VARCHAR(100) NOT NULL,  -- hiring, expansion, technology_change
-            signal          TEXT NOT NULL,
-            signal_source   VARCHAR(100),
-            confidence      NUMERIC(5,4) NOT NULL,
-            detected_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            valid_until     TIMESTAMPTZ,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
-    op.execute("CREATE INDEX idx_intent_company ON ai.intent_detection(company_id, detected_at DESC)")
+    CREATE TABLE IF NOT EXISTS ai.intent_detection (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        entity_type     TEXT NOT NULL,
+        entity_id       UUID NOT NULL,
+        intent_type     TEXT NOT NULL CHECK (intent_type IN ('hiring','expansion','technology_change','fundraising','partnership','acquisition')),
+        signal_strength NUMERIC(5,4) CHECK (signal_strength BETWEEN 0 AND 1),
+        signals         JSONB NOT NULL DEFAULT '[]',
+        detected_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at      TIMESTAMPTZ,
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS ai.note_embeddings (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            note_id         UUID NOT NULL,
-            entity_type     VARCHAR(50) NOT NULL,
-            entity_id       UUID NOT NULL,
-            embedding       vector(1536) NOT NULL,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            UNIQUE(note_id)
-        )
-    """)
-    op.execute("CREATE INDEX idx_note_embeddings_hnsw ON ai.note_embeddings USING hnsw(embedding vector_cosine_ops) WITH (m=16, ef_construction=64)")
+    CREATE TABLE IF NOT EXISTS ai.note_embeddings (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        note_id         UUID NOT NULL,
+        embedding       vector(1536) NOT NULL,
+        model_id        TEXT NOT NULL DEFAULT 'text-embedding-3-small',
+        status          TEXT NOT NULL DEFAULT 'active',
+        metadata        JSONB NOT NULL DEFAULT '{}',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at      TIMESTAMPTZ,
+        created_by      UUID,
+        updated_by      UUID,
+        version         INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(note_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_note_embeddings_hnsw ON ai.note_embeddings
+        USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 
-    # ═══════════════════════════════════════════════════════════
-    # BILLING DOMAIN
-    # ═══════════════════════════════════════════════════════════
+    -- ============================================================
+    -- BILLING SCHEMA
+    -- ============================================================
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS billing.subscriptions (
-            id                  UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id     UUID NOT NULL UNIQUE REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            plan_id             UUID NOT NULL REFERENCES billing.subscription_plans(id),
-            stripe_customer_id  VARCHAR(255),
-            stripe_sub_id       VARCHAR(255) UNIQUE,
-            billing_cycle       VARCHAR(20) NOT NULL DEFAULT 'monthly',  -- monthly, annual
-            current_period_start TIMESTAMPTZ,
-            current_period_end   TIMESTAMPTZ,
-            trial_start         TIMESTAMPTZ,
-            trial_end           TIMESTAMPTZ,
-            canceled_at         TIMESTAMPTZ,
-            cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
-            cancelation_reason  TEXT,
-            credits_balance     INTEGER NOT NULL DEFAULT 0,
-            credits_included    INTEGER NOT NULL DEFAULT 0,
-            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            deleted_at          TIMESTAMPTZ,
-            created_by          UUID REFERENCES auth.users(id),
-            version             INTEGER NOT NULL DEFAULT 1,
-            status              VARCHAR(50) NOT NULL DEFAULT 'trialing',
-            metadata            JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
-    op.execute("CREATE INDEX idx_subscriptions_stripe ON billing.subscriptions(stripe_sub_id)")
-    op.execute("CREATE INDEX idx_subscriptions_plan ON billing.subscriptions(plan_id)")
+    CREATE TABLE IF NOT EXISTS billing.subscriptions (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id     UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE UNIQUE,
+        plan_id             UUID NOT NULL REFERENCES billing.subscription_plans(id),
+        stripe_customer_id  TEXT,
+        stripe_sub_id       TEXT UNIQUE,
+        billing_cycle       TEXT NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly','annual')),
+        current_period_start TIMESTAMPTZ,
+        current_period_end  TIMESTAMPTZ,
+        trial_start         TIMESTAMPTZ,
+        trial_end           TIMESTAMPTZ,
+        cancel_at           TIMESTAMPTZ,
+        canceled_at         TIMESTAMPTZ,
+        ended_at            TIMESTAMPTZ,
+        seats               INTEGER NOT NULL DEFAULT 1,
+        status              TEXT NOT NULL DEFAULT 'trialing',
+        metadata            JSONB NOT NULL DEFAULT '{}',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at          TIMESTAMPTZ,
+        created_by          UUID,
+        updated_by          UUID,
+        version             INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS billing.invoices (
-            id                  UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id     UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            subscription_id     UUID REFERENCES billing.subscriptions(id),
-            stripe_invoice_id   VARCHAR(255) UNIQUE,
-            invoice_number      VARCHAR(100),
-            amount              NUMERIC(10,2) NOT NULL,
-            currency            VARCHAR(10) NOT NULL DEFAULT 'USD',
-            tax_amount          NUMERIC(10,2) NOT NULL DEFAULT 0,
-            discount_amount     NUMERIC(10,2) NOT NULL DEFAULT 0,
-            total_amount        NUMERIC(10,2) NOT NULL,
-            due_date            DATE,
-            paid_at             TIMESTAMPTZ,
-            payment_method      VARCHAR(100),
-            billing_reason      VARCHAR(100),
-            pdf_url             VARCHAR(1000),
-            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version             INTEGER NOT NULL DEFAULT 1,
-            status              VARCHAR(50) NOT NULL DEFAULT 'draft',
-            metadata            JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS billing.invoices (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id     UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        subscription_id     UUID REFERENCES billing.subscriptions(id),
+        stripe_invoice_id   TEXT UNIQUE,
+        invoice_number      TEXT,
+        subtotal            NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        tax                 NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        discount            NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        total               NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        currency            CHAR(3) NOT NULL DEFAULT 'USD',
+        paid_at             TIMESTAMPTZ,
+        due_date            DATE,
+        pdf_url             TEXT,
+        billing_reason      TEXT,
+        status              TEXT NOT NULL DEFAULT 'draft',
+        metadata            JSONB NOT NULL DEFAULT '{}',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at          TIMESTAMPTZ,
+        created_by          UUID,
+        updated_by          UUID,
+        version             INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS billing.credit_transactions (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            subscription_id UUID REFERENCES billing.subscriptions(id),
-            transaction_type VARCHAR(50) NOT NULL,  -- deduct, add, refund, expire, bonus
-            amount          INTEGER NOT NULL,         -- negative = deduction
-            balance_before  INTEGER NOT NULL,
-            balance_after   INTEGER NOT NULL,
-            description     VARCHAR(500) NOT NULL,
-            reference_type  VARCHAR(100),            -- search, export, enrichment, api_call
-            reference_id    UUID,
-            actor_id        UUID REFERENCES auth.users(id),
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        ) PARTITION BY RANGE (created_at)
-    """)
-    op.execute("CREATE TABLE billing.credit_transactions_2026_06 PARTITION OF billing.credit_transactions FOR VALUES FROM ('2026-06-01') TO ('2026-07-01')")
-    op.execute("CREATE TABLE billing.credit_transactions_future PARTITION OF billing.credit_transactions FOR VALUES FROM ('2026-07-01') TO ('2030-01-01')")
-    op.execute("CREATE INDEX idx_credit_tx_org ON billing.credit_transactions(organization_id, created_at DESC)")
+    CREATE TABLE IF NOT EXISTS billing.credit_transactions (
+        id                  UUID NOT NULL DEFAULT uuid_generate_v7(),
+        organization_id     UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        transaction_type    TEXT NOT NULL CHECK (transaction_type IN ('purchase','deduction','refund','bonus','expiry','adjustment')),
+        amount              INTEGER NOT NULL,
+        balance_before      INTEGER NOT NULL,
+        balance_after       INTEGER NOT NULL CHECK (balance_after >= 0),
+        description         TEXT,
+        reference_type      TEXT,
+        reference_id        UUID,
+        performed_by        UUID,
+        status              TEXT NOT NULL DEFAULT 'completed',
+        metadata            JSONB NOT NULL DEFAULT '{}',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at          TIMESTAMPTZ,
+        created_by          UUID,
+        updated_by          UUID,
+        version             INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (id, created_at)
+    ) PARTITION BY RANGE (created_at);
+    SELECT create_monthly_partition('billing.credit_transactions', NOW());
+    SELECT create_monthly_partition('billing.credit_transactions', NOW() + INTERVAL '1 month');
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS billing.payment_methods (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            organization_id UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
-            stripe_pm_id    VARCHAR(255) UNIQUE,
-            method_type     VARCHAR(50) NOT NULL,  -- card, bank_account
-            brand           VARCHAR(50),
-            last4           VARCHAR(4),
-            exp_month       SMALLINT,
-            exp_year        SMALLINT,
-            is_default      BOOLEAN NOT NULL DEFAULT FALSE,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            deleted_at      TIMESTAMPTZ,
-            version         INTEGER NOT NULL DEFAULT 1,
-            status          VARCHAR(50) NOT NULL DEFAULT 'active',
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS billing.payment_methods (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id     UUID NOT NULL REFERENCES auth.organizations(id) ON DELETE CASCADE,
+        stripe_pm_id        TEXT UNIQUE,
+        payment_type        TEXT NOT NULL DEFAULT 'card',
+        brand               TEXT,
+        last4               CHAR(4),
+        exp_month           INTEGER,
+        exp_year            INTEGER,
+        is_default          BOOLEAN NOT NULL DEFAULT FALSE,
+        billing_name        TEXT,
+        billing_email       TEXT,
+        billing_address     JSONB,
+        status              TEXT NOT NULL DEFAULT 'active',
+        metadata            JSONB NOT NULL DEFAULT '{}',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at          TIMESTAMPTZ,
+        created_by          UUID,
+        updated_by          UUID,
+        version             INTEGER NOT NULL DEFAULT 1
+    );
 
-    op.execute("""
-        CREATE TABLE IF NOT EXISTS billing.coupons (
-            id              UUID NOT NULL DEFAULT uuid_generate_v7() PRIMARY KEY,
-            code            VARCHAR(100) NOT NULL UNIQUE,
-            description     TEXT,
-            discount_type   VARCHAR(20) NOT NULL,  -- percentage, fixed_amount, credits
-            discount_value  NUMERIC(10,2) NOT NULL,
-            currency        VARCHAR(10),
-            max_redemptions INTEGER,
-            redemption_count INTEGER NOT NULL DEFAULT 0,
-            applies_to_plans TEXT[] NOT NULL DEFAULT '{}',
-            valid_from      TIMESTAMPTZ,
-            valid_until     TIMESTAMPTZ,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            version         INTEGER NOT NULL DEFAULT 1,
-            status          VARCHAR(50) NOT NULL DEFAULT 'active',
-            metadata        JSONB NOT NULL DEFAULT '{}'
-        )
+    CREATE TABLE IF NOT EXISTS billing.coupons (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+        organization_id     UUID,
+        code                TEXT NOT NULL UNIQUE,
+        discount_type       TEXT NOT NULL CHECK (discount_type IN ('percentage','fixed_amount','credits')),
+        discount_value      NUMERIC(12, 2) NOT NULL,
+        currency            CHAR(3),
+        max_redemptions     INTEGER,
+        redemption_count    INTEGER NOT NULL DEFAULT 0,
+        applicable_plans    UUID[],
+        valid_from          TIMESTAMPTZ,
+        valid_until         TIMESTAMPTZ,
+        is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+        status              TEXT NOT NULL DEFAULT 'active',
+        metadata            JSONB NOT NULL DEFAULT '{}',
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        deleted_at          TIMESTAMPTZ,
+        created_by          UUID,
+        updated_by          UUID,
+        version             INTEGER NOT NULL DEFAULT 1
+    );
+
+    -- Triggers
+    CREATE OR REPLACE TRIGGER trg_saved_searches_updated_at BEFORE UPDATE ON search.saved_searches FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    CREATE OR REPLACE TRIGGER trg_search_cache_updated_at BEFORE UPDATE ON search.search_cache FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    CREATE OR REPLACE TRIGGER trg_ai_models_updated_at BEFORE UPDATE ON ai.ai_models FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    CREATE OR REPLACE TRIGGER trg_lead_scores_updated_at BEFORE UPDATE ON ai.lead_scores FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    CREATE OR REPLACE TRIGGER trg_subscriptions_updated_at BEFORE UPDATE ON billing.subscriptions FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    CREATE OR REPLACE TRIGGER trg_invoices_updated_at BEFORE UPDATE ON billing.invoices FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    CREATE OR REPLACE TRIGGER trg_payment_methods_updated_at BEFORE UPDATE ON billing.payment_methods FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    CREATE OR REPLACE TRIGGER trg_coupons_updated_at BEFORE UPDATE ON billing.coupons FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+    -- RLS
+    ALTER TABLE search.saved_searches ENABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS saved_searches_org_isolation ON search.saved_searches;
+    CREATE POLICY saved_searches_org_isolation ON search.saved_searches
+        USING (organization_id = current_org_id());
+
+    ALTER TABLE ai.lead_scores ENABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS lead_scores_org_isolation ON ai.lead_scores;
+    CREATE POLICY lead_scores_org_isolation ON ai.lead_scores
+        USING (organization_id = current_org_id());
+
+    ALTER TABLE billing.subscriptions ENABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS subscriptions_org_isolation ON billing.subscriptions;
+    CREATE POLICY subscriptions_org_isolation ON billing.subscriptions
+        USING (organization_id = current_org_id());
+
+    ALTER TABLE billing.invoices ENABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS invoices_org_isolation ON billing.invoices;
+    CREATE POLICY invoices_org_isolation ON billing.invoices
+        USING (organization_id = current_org_id());
     """)
 
 
 def downgrade() -> None:
-    for tbl in [
-        "billing.coupons", "billing.payment_methods", "billing.credit_transactions",
-        "billing.invoices", "billing.subscriptions",
-        "ai.note_embeddings", "ai.intent_detection", "ai.classification",
-        "ai.ai_predictions", "ai.duplicates", "ai.recommendations",
-        "ai.lead_scores", "ai.embeddings", "ai.ai_models",
-        "search.query_embeddings", "search.search_statistics",
-        "search.search_cache", "search.scheduled_searches",
-        "search.saved_searches", "search.search_results",
-        "search.search_filters", "search.search_requests"
-    ]:
-        op.execute(f"DROP TABLE IF EXISTS {tbl} CASCADE")
+    op.execute("""
+    DROP TABLE IF EXISTS billing.coupons CASCADE;
+    DROP TABLE IF EXISTS billing.payment_methods CASCADE;
+    DROP TABLE IF EXISTS billing.credit_transactions CASCADE;
+    DROP TABLE IF EXISTS billing.invoices CASCADE;
+    DROP TABLE IF EXISTS billing.subscriptions CASCADE;
+    DROP TABLE IF EXISTS ai.note_embeddings CASCADE;
+    DROP TABLE IF EXISTS ai.intent_detection CASCADE;
+    DROP TABLE IF EXISTS ai.classification CASCADE;
+    DROP TABLE IF EXISTS ai.ai_predictions CASCADE;
+    DROP TABLE IF EXISTS ai.duplicates CASCADE;
+    DROP TABLE IF EXISTS ai.recommendations CASCADE;
+    DROP TABLE IF EXISTS ai.lead_scores CASCADE;
+    DROP TABLE IF EXISTS ai.embeddings CASCADE;
+    DROP TABLE IF EXISTS ai.ai_models CASCADE;
+    DROP TABLE IF EXISTS search.query_embeddings CASCADE;
+    DROP TABLE IF EXISTS search.search_statistics CASCADE;
+    DROP TABLE IF EXISTS search.search_cache CASCADE;
+    DROP TABLE IF EXISTS search.scheduled_searches CASCADE;
+    DROP TABLE IF EXISTS search.saved_searches CASCADE;
+    DROP TABLE IF EXISTS search.search_filters CASCADE;
+    DROP TABLE IF EXISTS search.search_requests CASCADE;
+    """)
