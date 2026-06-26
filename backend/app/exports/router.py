@@ -1,76 +1,151 @@
-import uuid
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from __future__ import annotations
+import io
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
-from backend.database import get_db
-from backend.app.exports.models import Export
-from backend.app.common.response import APIResponse, PaginatedResponse
-from backend.app.common.pagination import pagination_params, PaginationParams
-from backend.app.common.deps import get_current_user_id, get_current_org_id
+from backend.app.common.dependencies import get_current_user, get_db
+from backend.app.common.schemas import PaginatedResponse
+from backend.app.exports.schemas import (
+    ExportCreate,
+    ExportResponse,
+    ImportJobCreate,
+    ImportJobResponse,
+)
+from backend.app.exports.service import ExportService
+from backend.workers.tasks.export import generate_export_task
 
-router = APIRouter()
+router = APIRouter(prefix="/exports", tags=["Exports"])
+service = ExportService()
+
+_CONTENT_TYPES = {
+    "CSV": "text/csv",
+    "JSON": "application/json",
+    "EXCEL": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+
+_FILE_EXTENSIONS = {
+    "CSV": "csv",
+    "JSON": "json",
+    "EXCEL": "xlsx",
+}
 
 
-class ExportRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=255)
-    format: str = "csv"
-    filters: dict = Field(default_factory=dict)
-    export_type: str = "contacts"
-
-
-@router.post("/", response_model=APIResponse, status_code=202)
+@router.post("/", response_model=ExportResponse, status_code=201)
 async def create_export(
-    request: ExportRequest,
-    user_id: uuid.UUID = Depends(get_current_user_id),
-    org_id: uuid.UUID = Depends(get_current_org_id),
+    body: ExportCreate,
     db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    export = Export(
-        organization_id=org_id,
-        created_by=user_id,
-        name=request.name,
-        format=request.format,
-        filters=request.filters,
-        status="pending",
+    export = await service.create_export(
+        db,
+        org_id=current_user.organization_id,
+        user_id=current_user.id,
+        data=body,
     )
-    db.add(export)
-    await db.flush()
-
-    from backend.workers.tasks.export import generate_export_task
-    generate_export_task.delay(str(export.id), request.export_type)
-
-    return APIResponse(data={"id": str(export.id)}, message="Export queued")
+    await db.commit()
+    await db.refresh(export)
+    generate_export_task.delay(str(export.id), str(current_user.organization_id))
+    return ExportResponse.model_validate(export)
 
 
-@router.get("/", response_model=PaginatedResponse)
+@router.get("/", response_model=PaginatedResponse[ExportResponse])
 async def list_exports(
-    pagination: PaginationParams = Depends(pagination_params),
-    org_id: uuid.UUID = Depends(get_current_org_id),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    stmt = select(Export).where(
-        Export.organization_id == org_id, Export.deleted_at.is_(None)
-    ).order_by(Export.created_at.desc())
-    count = await db.execute(select(func.count()).select_from(stmt.subquery()))
-    total = count.scalar()
-    result = await db.execute(stmt.offset(pagination.offset).limit(pagination.per_page))
-    exports = [e.to_dict() for e in result.scalars().all()]
-    return PaginatedResponse.create(data=exports, total=total, page=pagination.page, per_page=pagination.per_page)
-
-
-@router.get("/{export_id}", response_model=APIResponse)
-async def get_export(
-    export_id: uuid.UUID,
-    org_id: uuid.UUID = Depends(get_current_org_id),
-    db: AsyncSession = Depends(get_db),
-):
-    result = await db.execute(
-        select(Export).where(Export.id == export_id, Export.organization_id == org_id)
+    items, total = await service.list_exports(
+        db,
+        org_id=current_user.organization_id,
+        page=page,
+        page_size=page_size,
     )
-    export = result.scalar_one_or_none()
-    if not export:
-        from backend.app.common.exceptions import NotFoundError
-        raise NotFoundError("Export not found")
-    return APIResponse(data=export.to_dict())
+    return PaginatedResponse(
+        items=[ExportResponse.model_validate(i) for i in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/imports/{job_id}", response_model=ImportJobResponse)
+async def get_import_job(
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    job = await service.get_import_job(db, org_id=current_user.organization_id, job_id=job_id)
+    return ImportJobResponse.model_validate(job)
+
+
+@router.post("/imports", response_model=ImportJobResponse, status_code=201)
+async def create_import_job(
+    body: ImportJobCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    job = await service.create_import_job(
+        db,
+        org_id=current_user.organization_id,
+        user_id=current_user.id,
+        data=body,
+    )
+    await db.commit()
+    await db.refresh(job)
+    return ImportJobResponse.model_validate(job)
+
+
+@router.get("/{export_id}", response_model=ExportResponse)
+async def get_export(
+    export_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    export = await service.get_export(db, org_id=current_user.organization_id, export_id=export_id)
+    return ExportResponse.model_validate(export)
+
+
+@router.get("/{export_id}/download")
+async def download_export(
+    export_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    org_id = current_user.organization_id
+    export = await service.get_export(db, org_id=org_id, export_id=export_id)
+
+    if export.status != "COMPLETED":
+        raise HTTPException(status_code=400, detail="Export not ready")
+
+    fmt = export.format
+    if fmt == "JSON":
+        content = await service.generate_json_export(db, org_id=org_id, export_id=export_id)
+    else:
+        content = await service.generate_csv_export(db, org_id=org_id, export_id=export_id)
+
+    await db.commit()
+
+    ext = _FILE_EXTENSIONS.get(fmt, "csv")
+    filename = f"{export.name}.{ext}"
+    media_type = _CONTENT_TYPES.get(fmt, "text/csv")
+
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.delete("/{export_id}", status_code=204)
+async def delete_export(
+    export_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    export = await service.get_export(db, org_id=current_user.organization_id, export_id=export_id)
+    await db.delete(export)
+    await db.commit()

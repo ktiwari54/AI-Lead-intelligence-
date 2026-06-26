@@ -1,61 +1,100 @@
-import uuid
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends
+from __future__ import annotations
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, update
 
-from backend.database import get_db
-from backend.app.notifications.models import Notification
-from backend.app.common.response import APIResponse, PaginatedResponse
-from backend.app.common.pagination import pagination_params, PaginationParams
-from backend.app.common.deps import get_current_user_id, get_current_org_id
+from backend.app.common.dependencies import get_current_user, get_db
+from backend.app.common.schemas import PaginatedResponse
+from backend.app.notifications.schemas import (
+    MarkReadRequest,
+    NotificationResponse,
+    UnreadCountResponse,
+)
+from backend.app.notifications.service import NotificationService
 
-router = APIRouter()
+router = APIRouter(prefix="/notifications", tags=["Notifications"])
+service = NotificationService()
 
 
-@router.get("/", response_model=PaginatedResponse)
+@router.get("/", response_model=PaginatedResponse[NotificationResponse])
 async def list_notifications(
-    pagination: PaginationParams = Depends(pagination_params),
-    user_id: uuid.UUID = Depends(get_current_user_id),
-    org_id: uuid.UUID = Depends(get_current_org_id),
+    unread_only: bool = Query(False),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    stmt = select(Notification).where(
-        Notification.user_id == user_id,
-        Notification.organization_id == org_id,
-        Notification.deleted_at.is_(None),
-    ).order_by(Notification.created_at.desc())
-    count = await db.execute(select(func.count()).select_from(stmt.subquery()))
-    total = count.scalar()
-    result = await db.execute(stmt.offset(pagination.offset).limit(pagination.per_page))
-    notifications = [n.to_dict() for n in result.scalars().all()]
-    return PaginatedResponse.create(
-        data=notifications, total=total, page=pagination.page, per_page=pagination.per_page
+    items, total = await service.list_for_user(
+        db,
+        org_id=current_user.organization_id,
+        user_id=current_user.id,
+        unread_only=unread_only,
+        page=page,
+        page_size=page_size,
+    )
+    return PaginatedResponse(
+        items=[NotificationResponse.model_validate(i) for i in items],
+        total=total,
+        page=page,
+        page_size=page_size,
     )
 
 
-@router.post("/{notification_id}/read", response_model=APIResponse)
+@router.get("/unread-count", response_model=UnreadCountResponse)
+async def unread_count(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    count = await service.get_unread_count(
+        db,
+        org_id=current_user.organization_id,
+        user_id=current_user.id,
+    )
+    return UnreadCountResponse(unread_count=count)
+
+
+@router.post("/mark-read")
 async def mark_read(
-    notification_id: uuid.UUID,
-    user_id: uuid.UUID = Depends(get_current_user_id),
+    body: MarkReadRequest,
     db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    await db.execute(
-        update(Notification)
-        .where(Notification.id == notification_id, Notification.user_id == user_id)
-        .values(status="read", read_at=datetime.now(timezone.utc))
+    marked = await service.mark_read(
+        db,
+        org_id=current_user.organization_id,
+        user_id=current_user.id,
+        notification_ids=body.notification_ids,
     )
-    return APIResponse(message="Notification marked as read")
+    await db.commit()
+    return {"marked": marked}
 
 
-@router.post("/read-all", response_model=APIResponse)
+@router.post("/mark-all-read")
 async def mark_all_read(
-    user_id: uuid.UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    await db.execute(
-        update(Notification)
-        .where(Notification.user_id == user_id, Notification.status == "unread")
-        .values(status="read", read_at=datetime.now(timezone.utc))
+    marked = await service.mark_all_read(
+        db,
+        org_id=current_user.organization_id,
+        user_id=current_user.id,
     )
-    return APIResponse(message="All notifications marked as read")
+    await db.commit()
+    return {"marked": marked}
+
+
+@router.delete("/{notification_id}", status_code=204)
+async def delete_notification(
+    notification_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    deleted = await service.delete(
+        db,
+        org_id=current_user.organization_id,
+        notification_id=notification_id,
+    )
+    await db.commit()
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Notification not found")
