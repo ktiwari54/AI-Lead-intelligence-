@@ -66,36 +66,37 @@ function NewDealModal({ open, onClose, pipeline }: NewDealModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">New Deal</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-6">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="text-base font-semibold text-foreground">New Deal</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-accent transition-colors">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Deal Name *</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Deal Name *</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input-base"
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Acme Corp - Enterprise Plan"
+              autoFocus
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Value (USD)</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Value (USD)</label>
             <input
               type="number"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input-base"
               value={form.value}
               onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
               placeholder="0"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Stage</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Stage</label>
             <select
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input-base"
               value={form.stage_id}
               onChange={e => setForm(f => ({ ...f, stage_id: e.target.value }))}
             >
@@ -105,27 +106,27 @@ function NewDealModal({ open, onClose, pipeline }: NewDealModalProps) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Expected Close Date</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Expected Close Date</label>
             <input
               type="date"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input-base"
               value={form.expected_close_date}
               onChange={e => setForm(f => ({ ...f, expected_close_date: e.target.value }))}
             />
           </div>
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {error && <p className="text-destructive text-sm">{error}</p>}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              className="flex-1 px-4 py-2 text-sm border border-border rounded-lg text-foreground bg-card hover:bg-accent transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createDeal.isPending}
-              className="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {createDeal.isPending ? "Creating..." : "Create Deal"}
             </button>
@@ -158,18 +159,20 @@ export default function CRMPage() {
 
   if (pipelineError) {
     return (
-      <div className="p-8 text-center text-red-600">
-        Failed to load CRM data. Please try again.
+      <div className="page-container flex min-h-[40vh] items-center justify-center">
+        <p className="text-destructive text-sm font-medium">Failed to load CRM data. Please try again.</p>
       </div>
     );
   }
 
   if (!pipelines || pipelines.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <div className="text-gray-400 text-5xl mb-4">📋</div>
-        <h2 className="text-xl font-semibold text-gray-700 mb-2">No pipeline found.</h2>
-        <p className="text-gray-500">Create your first pipeline to get started.</p>
+      <div className="page-container flex min-h-[40vh] flex-col items-center justify-center text-center gap-3">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+          <CheckSquare className="h-7 w-7 text-muted-foreground" />
+        </div>
+        <h2 className="text-lg font-semibold text-foreground">No pipeline found</h2>
+        <p className="text-sm text-muted-foreground">Create your first pipeline to get started.</p>
       </div>
     );
   }

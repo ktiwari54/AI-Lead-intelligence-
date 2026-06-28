@@ -21,6 +21,8 @@ import {
   Plug,
   Key,
   CreditCard,
+  Code2,
+  GitBranch,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -78,6 +80,13 @@ export const mainNavigation: NavSection[] = [
     items: [{ name: 'Reports', href: '/analytics', icon: BarChart3 }],
   },
   {
+    title: 'Automation',
+    items: [
+      { name: 'Workflows', href: '/workflows', icon: GitBranch },
+      { name: 'Connectors', href: '/connectors', icon: Plug },
+    ],
+  },
+  {
     title: 'Data Ops',
     items: [
       { name: 'Imports', href: '/imports', icon: Upload },
@@ -87,6 +96,7 @@ export const mainNavigation: NavSection[] = [
 ]
 
 export const bottomNavigation: NavItem[] = [
+  { name: 'Developer', href: '/developer', icon: Code2 },
   { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Admin', href: '/admin', icon: Shield, permission: 'admin:read' },
@@ -113,6 +123,9 @@ export const commandPaletteRoutes = [
   { label: 'API Keys', href: '/settings', keywords: ['developer', 'keys'] },
   { label: 'Imports', href: '/imports', keywords: ['upload', 'csv'] },
   { label: 'Exports', href: '/exports', keywords: ['download', 'csv'] },
+  { label: 'Workflows', href: '/workflows', keywords: ['automation', 'trigger', 'action'] },
+  { label: 'Connectors', href: '/connectors', keywords: ['marketplace', 'integration', 'apollo', 'hubspot', 'salesforce'] },
+  { label: 'Developer Portal', href: '/developer', keywords: ['api', 'keys', 'sdk', 'webhook', 'docs'] },
   { label: 'Admin', href: '/admin', keywords: ['audit', 'flags', 'system'] },
 ]
 
