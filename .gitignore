@@ -57,5 +57,10 @@ node_modules/
 # Docker
 docker-compose.override.yml
 
+# Cloudflare tunnel secrets
+infra/cloudflare/tunnel.yml
+.cloudflared/
+*.cloudflared.json
+
 # Alembic
 *.pyc

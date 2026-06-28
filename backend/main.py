@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import PlainTextResponse
 
 from backend.config import settings
 
@@ -25,6 +26,7 @@ from backend.app.integrations.router import router as integrations_router
 from backend.app.admin.router import router as admin_router
 from backend.app.analytics.router import router as analytics_router
 from backend.app.discovery.router import router as discovery_router
+from backend.infrastructure.observability.metrics import metrics
 
 
 @asynccontextmanager
@@ -75,4 +77,14 @@ app.include_router(discovery_router,     prefix=f"{API_V1}",                tags
 
 @app.get("/health", tags=["Health"])
 async def health_check():
+    metrics.counter("http_requests_total", {"endpoint": "health", "status": "200"}).inc()
     return {"status": "healthy", "version": settings.APP_VERSION, "environment": settings.ENVIRONMENT}
+
+
+@app.get("/metrics", tags=["Observability"], include_in_schema=False)
+async def prometheus_metrics():
+    """Prometheus scrape endpoint (free observability stack)."""
+    return PlainTextResponse(
+        content=metrics.export_prometheus(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )

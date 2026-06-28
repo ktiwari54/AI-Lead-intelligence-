@@ -1,0 +1,15 @@
+# Copy to tunnel.yml after creating a tunnel in Cloudflare Zero Trust (free).
+# Dashboard: Zero Trust → Networks → Tunnels → Create tunnel
+#
+#   copy infra\cloudflare\tunnel.example.yml infra\cloudflare\tunnel.yml
+#   # paste your tunnel UUID and credentials-file path
+
+tunnel: <TUNNEL_UUID>
+credentials-file: C:\Users\PC\.cloudflared\<TUNNEL_UUID>.json
+
+ingress:
+  - hostname: app.yourdomain.com
+    service: http://localhost:3000
+  - hostname: api.yourdomain.com
+    service: http://localhost:8000
+  - service: http_status:404

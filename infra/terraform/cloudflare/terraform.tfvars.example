@@ -1,0 +1,4 @@
+zone_id    = "your-zone-id-from-cloudflare-dashboard"
+domain     = "yourdomain.com"
+tunnel_id  = "your-tunnel-uuid"
+# Set via environment: CLOUDFLARE_API_TOKEN or terraform variable cloudflare_api_token
