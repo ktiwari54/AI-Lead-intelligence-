@@ -2,6 +2,7 @@ import { User } from '@/types'
 
 const TOKEN_KEY = 'ai_lead_token'
 const USER_KEY = 'ai_lead_user'
+const AUTH_COOKIE = 'ai_lead_authenticated'
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -11,11 +12,13 @@ export function getToken(): string | null {
 export function setToken(token: string): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(TOKEN_KEY, token)
+  document.cookie = `${AUTH_COOKIE}=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`
 }
 
 export function clearToken(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem(TOKEN_KEY)
+  document.cookie = `${AUTH_COOKIE}=; path=/; max-age=0`
 }
 
 export function getUser(): User | null {

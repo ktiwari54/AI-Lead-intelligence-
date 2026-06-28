@@ -49,6 +49,13 @@ class Settings(BaseSettings):
 
     # ─── OpenSearch ───────────────────────────────────────────────────────────
     OPENSEARCH_URL: str = "http://localhost:9200"
+    OPENSEARCH_INDEX_PREFIX: str = "ali"
+
+    # ─── Discovery Connectors ─────────────────────────────────────────────────
+    APOLLO_API_KEY: str = ""
+    CLEARBIT_API_KEY: str = ""
+    HUNTER_API_KEY: str = ""
+    USE_MOCK_CONNECTORS: bool = True
 
     # ─── Email ────────────────────────────────────────────────────────────────
     SMTP_HOST: str = ""

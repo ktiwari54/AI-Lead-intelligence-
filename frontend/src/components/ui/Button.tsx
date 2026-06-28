@@ -1,61 +1,79 @@
-import { clsx } from 'clsx'
+'use client'
+
+import * as React from 'react'
 import Link from 'next/link'
-import { ButtonHTMLAttributes, ReactNode } from 'react'
+import { Slot } from '@radix-ui/react-slot'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
-type Size = 'sm' | 'md' | 'lg'
+export const buttonVariants = cva(
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ring-offset-background',
+  {
+    variants: {
+      variant: {
+        default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
+        destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+        outline: 'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
+        secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
+      },
+      size: {
+        default: 'h-10 px-4 py-2',
+        sm: 'h-8 rounded-md px-3 text-xs',
+        lg: 'h-11 rounded-lg px-8',
+        icon: 'h-9 w-9',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  }
+)
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant
-  size?: Size
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'button'
+    return (
+      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+    )
+  }
+)
+Button.displayName = 'Button'
+
+/** @deprecated Use named `Button` import — legacy default export for older pages */
+type LegacyVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
+type LegacySize = 'sm' | 'md' | 'lg'
+
+interface LegacyButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: LegacyVariant
+  size?: LegacySize
   loading?: boolean
   href?: string
-  children: ReactNode
+  children: React.ReactNode
 }
 
-const variantClasses: Record<Variant, string> = {
-  primary:
-    'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 border border-transparent',
-  secondary:
-    'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-primary-500',
-  danger:
-    'bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500 border border-transparent',
-  ghost:
-    'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent focus:ring-primary-500',
+const legacyVariantMap: Record<LegacyVariant, ButtonProps['variant']> = {
+  primary: 'default',
+  secondary: 'secondary',
+  danger: 'destructive',
+  ghost: 'ghost',
 }
 
-const sizeClasses: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-xs',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-5 py-2.5 text-sm',
+const legacySizeMap: Record<LegacySize, ButtonProps['size']> = {
+  sm: 'sm',
+  md: 'default',
+  lg: 'lg',
 }
 
-function Spinner() {
-  return (
-    <svg
-      className="animate-spin h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
-  )
-}
-
-export default function Button({
+function LegacyButton({
   variant = 'primary',
   size = 'md',
   loading = false,
@@ -64,37 +82,28 @@ export default function Button({
   className,
   disabled,
   ...props
-}: ButtonProps) {
-  const classes = clsx(
-    'btn',
-    'focus:ring-2 focus:ring-offset-2',
-    variantClasses[variant],
-    sizeClasses[size],
-    className
+}: LegacyButtonProps) {
+  const btn = (
+    <Button
+      variant={legacyVariantMap[variant]}
+      size={legacySizeMap[size]}
+      disabled={disabled || loading}
+      className={className}
+      {...props}
+    >
+      {loading ? 'Loading...' : children}
+    </Button>
   )
 
   if (href) {
     return (
-      <Link href={href} className={classes}>
-        {children}
+      <Link href={href} className={cn('inline-flex', className)}>
+        {btn}
       </Link>
     )
   }
 
-  return (
-    <button
-      className={classes}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading ? (
-        <span className="flex items-center gap-2">
-          <Spinner />
-          {children}
-        </span>
-      ) : (
-        children
-      )}
-    </button>
-  )
+  return btn
 }
+
+export default LegacyButton

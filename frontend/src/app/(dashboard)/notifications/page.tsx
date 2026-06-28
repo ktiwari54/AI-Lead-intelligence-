@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Bell } from "lucide-react";
 import { get, post, patch, del } from "@/lib/api";
+import { PageHeader } from "@/components/enterprise/PageHeader";
+import { EmptyState } from "@/components/enterprise/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 
 // ---- Types ----
 interface Notification {
@@ -201,7 +207,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-container max-w-3xl space-y-6">
       {/* Toast container */}
       <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
         {toasts.map(n => (
@@ -209,41 +215,27 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-          {unreadCount != null && unreadCount > 0 && (
-            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              {unreadCount}
-            </span>
-          )}
-          {connected && (
-            <span className="flex items-center gap-1.5 text-xs text-green-600 font-medium">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              Live
-            </span>
-          )}
-        </div>
-        <button
-          onClick={() => markAllRead.mutate()}
-          disabled={markAllRead.isPending}
-          className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-        >
-          {markAllRead.isPending ? "Marking..." : "Mark All Read"}
-        </button>
-      </div>
+      <PageHeader
+        title="Notifications"
+        description="Alerts for discovery jobs, exports, scoring, and system events."
+        badge={unreadCount != null && unreadCount > 0 ? `${unreadCount} unread` : undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            {connected && <Badge variant="success">Live</Badge>}
+            <Button variant="secondary" size="sm" onClick={() => markAllRead.mutate()} loading={markAllRead.isPending}>
+              Mark all read
+            </Button>
+          </div>
+        }
+      />
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
+      <div className="flex gap-1 border-b border-border">
         {(["all", "unread"] as const).map(f => (
           <button
             key={f}
             onClick={() => { setFilter(f); setPage(1); }}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${
-              filter === f
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+            className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium capitalize transition-colors ${
+              filter === f ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             {f}
@@ -251,12 +243,7 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-        </div>
-      )}
+      {isLoading && <Skeleton className="h-64 rounded-xl" />}
 
       {/* Error */}
       {error && (
@@ -267,11 +254,7 @@ export default function NotificationsPage() {
 
       {/* Empty state */}
       {!isLoading && !error && notifications.length === 0 && (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">🔔</div>
-          <h2 className="text-lg font-semibold text-gray-700 mb-1">No notifications yet</h2>
-          <p className="text-gray-400 text-sm">When you receive notifications, they'll appear here.</p>
-        </div>
+        <EmptyState icon={Bell} title="No notifications yet" description="When you receive notifications, they'll appear here." />
       )}
 
       {/* Notification list */}
@@ -281,8 +264,8 @@ export default function NotificationsPage() {
             <div
               key={notification.id}
               onClick={() => handleClick(notification)}
-              className={`group relative flex items-start gap-4 px-4 py-4 rounded-xl cursor-pointer transition-colors ${
-                notification.is_read ? "bg-white hover:bg-gray-50" : "bg-blue-50 hover:bg-blue-100"
+              className={`group relative flex cursor-pointer items-start gap-4 rounded-xl border border-border px-4 py-4 transition-colors ${
+                notification.is_read ? "bg-card hover:bg-muted/30" : "bg-primary/5 hover:bg-primary/10"
               }`}
             >
               {/* Channel icon */}

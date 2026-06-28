@@ -7,14 +7,18 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/ai_lead_intel
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
+      OPENSEARCH_URL: http://opensearch:9200
       SECRET_KEY: dev-secret-key-change-in-production
       ENVIRONMENT: development
       DEBUG: "true"
+      USE_MOCK_CONNECTORS: "true"
     depends_on:
       db:
         condition: service_healthy
@@ -29,15 +33,22 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/ai_lead_intel
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
+      OPENSEARCH_URL: http://opensearch:9200
       SECRET_KEY: dev-secret-key-change-in-production
+      ENVIRONMENT: development
+      USE_MOCK_CONNECTORS: "true"
     depends_on:
       - db
       - redis
+    volumes:
+      - ./backend:/app/backend
     command: celery -A backend.workers.celery_app worker --loglevel=info --concurrency=4
     restart: unless-stopped
 
@@ -88,12 +99,18 @@ services:
     image: opensearchproject/opensearch:2.17.0
     environment:
       - discovery.type=single-node
-      - plugins.security.disabled=true
+      - DISABLE_SECURITY_PLUGIN=true
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
       - "9200:9200"
     volumes:
       - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     restart: unless-stopped
 
 volumes:

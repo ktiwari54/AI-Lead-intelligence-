@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.common.dependencies import get_current_user, get_db
-from backend.app.common.schemas import PaginatedResponse
+from backend.database import get_db
+from backend.app.common.deps import get_current_user
+from backend.app.common.response import PaginatedResponse
 from backend.app.exports.schemas import (
     ExportCreate,
     ExportResponse,

@@ -24,6 +24,7 @@ from backend.app.notifications.models import *  # noqa: F401, F403
 from backend.app.exports.models import *  # noqa: F401, F403
 from backend.app.integrations.models import *  # noqa: F401, F403
 from backend.app.admin.models import *  # noqa: F401, F403
+from backend.app.discovery.models import *  # noqa: F401, F403
 
 config = context.config
 settings = get_settings()
@@ -74,13 +75,13 @@ async def run_async_migrations() -> None:
     )
 
     async with connectable.connect() as connection:
-        # Set search_path so Alembic can resolve cross-schema FK references
         search_path = ", ".join(SCHEMAS)
         await connection.execute(text(f"SET search_path TO {search_path}"))
+        await connection.commit()
 
-        await connection.run_sync(
-            lambda conn: context.configure(
-                connection=conn,
+        def run_migrations(connection):
+            context.configure(
+                connection=connection,
                 target_metadata=target_metadata,
                 include_schemas=True,
                 version_table_schema="public",
@@ -88,9 +89,10 @@ async def run_async_migrations() -> None:
                 compare_type=True,
                 compare_server_default=True,
             )
-        )
-        async with connection.begin():
-            await connection.run_sync(lambda conn: context.run_migrations())
+            with context.begin_transaction():
+                context.run_migrations()
+
+        await connection.run_sync(run_migrations)
 
     await connectable.dispose()
 

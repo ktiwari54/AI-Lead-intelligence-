@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { get, post, patch, del } from "@/lib/api";
 import { useSubscription, useCreditBalance, useCreditTransactions, useChangePlan, useBillingPortal } from "@/hooks/useBilling";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import Modal from "@/components/ui/Modal";
 
 // ---- Types ----
 interface UserProfile {
@@ -66,7 +71,14 @@ function ProfileTab() {
     onError: () => setPwMsg("Failed to change password."),
   });
 
-  if (isLoading) return <div className="py-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>;
+  if (isLoading) {
+    return (
+      <div className="max-w-lg space-y-6">
+        <Skeleton className="h-48 rounded-xl" />
+        <Skeleton className="h-56 rounded-xl" />
+      </div>
+    );
+  }
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,79 +92,60 @@ function ProfileTab() {
   };
 
   return (
-    <div className="space-y-8 max-w-lg">
-      <div>
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Personal Information</h2>
-        <form onSubmit={handleProfileSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-              <input
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                value={form.first_name}
-                onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
-              />
+    <div className="max-w-lg space-y-6">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Personal Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleProfileSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-foreground">First Name</label>
+                <input className="input-base w-full" value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-foreground">Last Name</label>
+                <input className="input-base w-full" value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-              <input
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                value={form.last_name}
-                onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
-              />
+              <label className="mb-1 block text-sm font-medium text-foreground">Email</label>
+              <input className="input-base w-full bg-muted text-muted-foreground" value={user?.email ?? ""} disabled />
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500"
-              value={user?.email ?? ""}
-              disabled
-            />
-          </div>
-          {profileMsg && <p className={`text-sm ${profileMsg.includes("Failed") ? "text-red-600" : "text-green-600"}`}>{profileMsg}</p>}
-          <button type="submit" disabled={updateProfile.isPending} className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-            {updateProfile.isPending ? "Saving..." : "Save Changes"}
-          </button>
-        </form>
-      </div>
+            {profileMsg && <p className={`text-sm ${profileMsg.includes("Failed") ? "text-destructive" : "text-success"}`}>{profileMsg}</p>}
+            <Button type="submit" loading={updateProfile.isPending}>
+              {updateProfile.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-      <div className="border-t border-gray-200 pt-8">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Change Password</h2>
-        <form onSubmit={handlePwSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-            <input
-              type="password"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={pwForm.current_password}
-              onChange={e => setPwForm(f => ({ ...f, current_password: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-            <input
-              type="password"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={pwForm.new_password}
-              onChange={e => setPwForm(f => ({ ...f, new_password: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-            <input
-              type="password"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={pwForm.confirm_password}
-              onChange={e => setPwForm(f => ({ ...f, confirm_password: e.target.value }))}
-            />
-          </div>
-          {pwMsg && <p className={`text-sm ${pwMsg.includes("Failed") || pwMsg.includes("don't") ? "text-red-600" : "text-green-600"}`}>{pwMsg}</p>}
-          <button type="submit" disabled={changePassword.isPending} className="px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-900 disabled:opacity-50">
-            {changePassword.isPending ? "Changing..." : "Change Password"}
-          </button>
-        </form>
-      </div>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Change Password</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePwSubmit} className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">Current Password</label>
+              <input type="password" className="input-base w-full" value={pwForm.current_password} onChange={e => setPwForm(f => ({ ...f, current_password: e.target.value }))} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">New Password</label>
+              <input type="password" className="input-base w-full" value={pwForm.new_password} onChange={e => setPwForm(f => ({ ...f, new_password: e.target.value }))} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">Confirm New Password</label>
+              <input type="password" className="input-base w-full" value={pwForm.confirm_password} onChange={e => setPwForm(f => ({ ...f, confirm_password: e.target.value }))} />
+            </div>
+            {pwMsg && <p className={`text-sm ${pwMsg.includes("Failed") || pwMsg.includes("don't") ? "text-destructive" : "text-success"}`}>{pwMsg}</p>}
+            <Button type="submit" variant="secondary" loading={changePassword.isPending}>
+              {changePassword.isPending ? "Changing..." : "Change Password"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -172,7 +165,16 @@ function BillingTab() {
   const changePlan = useChangePlan();
   const billingPortal = useBillingPortal();
 
-  if (loadingSub) return <div className="py-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>;
+  if (loadingSub) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-40 rounded-xl" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
+        </div>
+      </div>
+    );
+  }
 
   const currentPlan = subscription?.plan ?? "FREE";
   const creditsRemaining = credits?.credits_remaining ?? subscription?.credits_remaining ?? 0;
@@ -183,101 +185,109 @@ function BillingTab() {
   const currentIdx = PLAN_ORDER.indexOf(currentPlan);
 
   return (
-    <div className="space-y-8">
-      {/* Current plan card */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">Current Plan</h2>
-            <p className="text-2xl font-bold text-indigo-600 mt-1">{currentPlan}</p>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Current Plan</CardTitle>
+              <p className="mt-1 text-2xl font-bold text-primary">{currentPlan}</p>
+            </div>
+            <Badge variant={subscription?.status === "active" ? "success" : "warning"}>
+              {subscription?.status ?? "unknown"}
+            </Badge>
           </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${subscription?.status === "active" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-            {subscription?.status ?? "unknown"}
-          </span>
-        </div>
-        <div className="mb-2 flex justify-between text-sm text-gray-600">
-          <span>Credits remaining</span>
-          <span>{creditsRemaining.toLocaleString()} / {creditsMonthly.toLocaleString()}</span>
-        </div>
-        <div className="w-full bg-gray-100 rounded-full h-2">
-          <div className="bg-indigo-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
-        </div>
-        <button
-          onClick={() => billingPortal.mutate(window.location.href)}
-          disabled={billingPortal.isPending}
-          className="mt-4 px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-        >
-          {billingPortal.isPending ? "Opening..." : "Manage Billing"}
-        </button>
-      </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-2 flex justify-between text-sm text-muted-foreground">
+            <span>Credits remaining</span>
+            <span>{creditsRemaining.toLocaleString()} / {creditsMonthly.toLocaleString()}</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-muted">
+            <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+          </div>
+          <Button
+            variant="secondary"
+            className="mt-4"
+            onClick={() => billingPortal.mutate(window.location.href)}
+            loading={billingPortal.isPending}
+          >
+            {billingPortal.isPending ? "Opening..." : "Manage Billing"}
+          </Button>
+        </CardContent>
+      </Card>
 
-      {/* Plan cards */}
       <div>
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Plans</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <h2 className="mb-4 text-base font-semibold text-foreground">Plans</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PLANS.map((plan, idx) => {
             const isCurrent = plan.id === currentPlan;
             const isUpgrade = idx > currentIdx;
             return (
-              <div key={plan.id} className={`border rounded-xl p-5 ${isCurrent ? "border-indigo-400 bg-indigo-50" : "border-gray-200 bg-white"}`}>
-                <div className="font-semibold text-gray-900">{plan.label}</div>
-                <div className="text-xl font-bold text-indigo-600 mt-1 mb-3">{plan.price}</div>
-                <ul className="space-y-1 mb-4">
-                  {plan.features.map(f => (
-                    <li key={f} className="text-xs text-gray-600 flex items-start gap-1">
-                      <span className="text-green-500 mt-0.5">✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-                {isCurrent ? (
-                  <div className="text-center text-xs font-medium text-indigo-600 bg-indigo-100 rounded-lg py-1.5">Current Plan</div>
-                ) : (
-                  <button
-                    onClick={() => changePlan.mutate(plan.id)}
-                    disabled={changePlan.isPending}
-                    className={`w-full text-xs font-medium rounded-lg py-1.5 ${isUpgrade ? "bg-indigo-600 text-white hover:bg-indigo-700" : "border border-gray-300 text-gray-700 hover:bg-gray-50"} disabled:opacity-50`}
-                  >
-                    {changePlan.isPending ? "..." : isUpgrade ? "Upgrade" : "Downgrade"}
-                  </button>
-                )}
-              </div>
+              <Card key={plan.id} className={isCurrent ? "border-primary bg-primary/5" : ""}>
+                <CardContent className="p-5">
+                  <div className="font-semibold text-foreground">{plan.label}</div>
+                  <div className="mb-3 mt-1 text-xl font-bold text-primary">{plan.price}</div>
+                  <ul className="mb-4 space-y-1">
+                    {plan.features.map(f => (
+                      <li key={f} className="flex items-start gap-1 text-xs text-muted-foreground">
+                        <span className="mt-0.5 text-success">✓</span> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  {isCurrent ? (
+                    <Badge className="w-full justify-center py-1.5" variant="primary">Current Plan</Badge>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={isUpgrade ? "primary" : "secondary"}
+                      className="w-full"
+                      onClick={() => changePlan.mutate(plan.id)}
+                      loading={changePlan.isPending}
+                    >
+                      {isUpgrade ? "Upgrade" : "Downgrade"}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
             );
           })}
         </div>
       </div>
 
-      {/* Transactions */}
-      <div>
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Recent Transactions</h2>
-        {!transactions?.items?.length ? (
-          <p className="text-gray-400 text-sm">No transactions yet.</p>
-        ) : (
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Recent Transactions</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {!transactions?.items?.length ? (
+            <p className="px-6 py-8 text-sm text-muted-foreground">No transactions yet.</p>
+          ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="border-b border-border bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Amount</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Balance</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Balance</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {transactions.items.map(tx => (
-                  <tr key={tx.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-600">{new Date(tx.created_at).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-gray-800">{tx.transaction_type}</td>
-                    <td className={`px-4 py-3 font-medium ${tx.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  <tr key={tx.id} className="border-t border-border hover:bg-muted/30">
+                    <td className="px-4 py-3 text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-foreground">{tx.transaction_type}</td>
+                    <td className={`px-4 py-3 font-medium ${tx.amount >= 0 ? "text-success" : "text-destructive"}`}>
                       {tx.amount >= 0 ? "+" : ""}{tx.amount}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{tx.balance_after}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{tx.balance_after}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -326,62 +336,62 @@ function ApiKeysTab() {
   };
 
   return (
-    <div>
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-        <span className="text-amber-500 text-lg">⚠</span>
-        <p className="text-sm text-amber-800">API keys grant full access to your organization. Keep them secure and never share them publicly.</p>
-      </div>
+    <div className="space-y-6">
+      <Card className="border-warning/30 bg-warning/5">
+        <CardContent className="flex items-start gap-3 p-4">
+          <span className="text-lg text-warning">⚠</span>
+          <p className="text-sm text-foreground">API keys grant full access to your organization. Keep them secure and never share them publicly.</p>
+        </CardContent>
+      </Card>
 
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-base font-semibold text-gray-900">API Keys</h2>
-        <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
-          + Create API Key
-        </button>
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-foreground">API Keys</h2>
+        <Button onClick={() => setShowModal(true)}>+ Create API Key</Button>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>
+        <Skeleton className="h-48 rounded-xl" />
       ) : !apiKeys?.length ? (
-        <p className="text-gray-400 text-sm">No API keys yet.</p>
+        <p className="text-sm text-muted-foreground">No API keys yet.</p>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Name</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Key Prefix</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Created</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Last Used</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {apiKeys.map(key => (
-                <tr key={key.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{key.name}</td>
-                  <td className="px-4 py-3 font-mono text-gray-600">{key.key_prefix.slice(0, 8)}...</td>
-                  <td className="px-4 py-3 text-gray-600">{new Date(key.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-gray-600">{key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : "Never"}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${key.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
-                      {key.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => revokeKey.mutate(key.id)}
-                      disabled={revokeKey.isPending}
-                      className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
-                    >
-                      Revoke
-                    </button>
-                  </td>
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Key Prefix</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Last Used</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {apiKeys.map(key => (
+                  <tr key={key.id} className="border-t border-border hover:bg-muted/30">
+                    <td className="px-4 py-3 font-medium text-foreground">{key.name}</td>
+                    <td className="px-4 py-3 font-mono text-muted-foreground">{key.key_prefix.slice(0, 8)}...</td>
+                    <td className="px-4 py-3 text-muted-foreground">{new Date(key.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : "Never"}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={key.is_active ? "success" : "gray"}>{key.is_active ? "Active" : "Inactive"}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => revokeKey.mutate(key.id)}
+                        disabled={revokeKey.isPending}
+                        className="text-xs font-medium text-destructive hover:underline disabled:opacity-50"
+                      >
+                        Revoke
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Create API Key Modal */}
@@ -466,68 +476,51 @@ function IntegrationsTab() {
   };
 
   return (
-    <div>
-      <h2 className="text-base font-semibold text-gray-900 mb-4">Integrations</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="space-y-6">
+      <h2 className="text-base font-semibold text-foreground">Integrations</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {INTEGRATIONS.map(integration => (
-          <div key={integration.id} className="bg-white border border-gray-200 rounded-xl p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`w-10 h-10 rounded-lg ${integration.color} flex items-center justify-center text-white text-sm font-bold`}>
-                {integration.initials}
+          <Card key={integration.id}>
+            <CardContent className="p-5">
+              <div className="mb-3 flex items-center gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold text-white ${integration.color}`}>
+                  {integration.initials}
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-foreground">{integration.name}</div>
+                  <Badge variant={connected[integration.id] ? "success" : "gray"}>
+                    {connected[integration.id] ? "Connected" : "Disconnected"}
+                  </Badge>
+                </div>
               </div>
-              <div>
-                <div className="font-medium text-gray-900 text-sm">{integration.name}</div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${connected[integration.id] ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                  {connected[integration.id] ? "Connected" : "Disconnected"}
-                </span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mb-4">{integration.description}</p>
-            <button
-              onClick={() => { setConfiguring(integration); setApiKey(""); setMsg(""); }}
-              className="w-full px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Configure
-            </button>
-          </div>
+              <p className="mb-4 text-xs text-muted-foreground">{integration.description}</p>
+              <Button variant="secondary" size="sm" className="w-full" onClick={() => { setConfiguring(integration); setApiKey(""); setMsg(""); }}>
+                Configure
+              </Button>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      {/* Configure Modal */}
-      {configuring && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg ${configuring.color} flex items-center justify-center text-white text-xs font-bold`}>
-                  {configuring.initials}
-                </div>
-                <h2 className="text-lg font-semibold text-gray-900">{configuring.name}</h2>
-              </div>
-              <button onClick={() => setConfiguring(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
-            </div>
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-                <input
-                  type="password"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={apiKey}
-                  onChange={e => setApiKey(e.target.value)}
-                  placeholder="Enter your API key"
-                />
-              </div>
-              {msg && <p className={`text-sm ${msg.includes("Failed") ? "text-red-600" : "text-green-600"}`}>{msg}</p>}
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setConfiguring(null)} className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-                  {saving ? "Saving..." : "Save"}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={configuring !== null}
+        onClose={() => setConfiguring(null)}
+        title={configuring ? `Configure ${configuring.name}` : "Configure"}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setConfiguring(null)}>Cancel</Button>
+            <Button type="submit" form="integration-form" loading={saving}>Save</Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <form id="integration-form" onSubmit={handleSave} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-foreground">API Key</label>
+            <input type="password" className="input-base w-full" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="Enter your API key" />
+          </div>
+          {msg && <p className={`text-sm ${msg.includes("Failed") ? "text-destructive" : "text-success"}`}>{msg}</p>}
+        </form>
+      </Modal>
     </div>
   );
 }
@@ -537,29 +530,28 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("Profile");
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-8">
-        <nav className="flex gap-1">
-          {TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </nav>
+    <div className="page-container space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">Settings</h1>
+        <p className="text-sm text-muted-foreground">Manage your profile, billing, API keys, and integrations.</p>
       </div>
 
-      {/* Tab content */}
+      <div className="flex gap-1 overflow-x-auto border-b border-border">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === tab
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       {activeTab === "Profile" && <ProfileTab />}
       {activeTab === "Billing" && <BillingTab />}
       {activeTab === "API Keys" && <ApiKeysTab />}

@@ -11,8 +11,8 @@ from backend.app.search.schemas import (
     SavedSearchResponse,
     SearchHistoryResponse,
 )
-from backend.app.common.database import get_db
-from backend.app.common.auth import get_current_user
+from backend.database import get_db
+from backend.app.common.deps import get_current_user
 
 router = APIRouter(prefix="/search", tags=["search"])
 

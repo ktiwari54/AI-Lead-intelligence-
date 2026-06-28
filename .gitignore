@@ -16,7 +16,12 @@ ENV/
 
 # Environment
 .env
+.env.local
+.env.*.local
 !.env.example
+
+# TypeScript build info
+tsconfig.tsbuildinfo
 
 # Logs
 *.log

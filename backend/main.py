@@ -4,6 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from backend.config import settings
+
+# Register reference ORM models (Industry, Country, etc.) for mapper resolution
+import backend.app.common.reference  # noqa: F401
+# Register discovery connectors (apollo, mock_discovery, etc.)
+import backend.connectors  # noqa: F401
 from backend.app.auth.router import router as auth_router
 from backend.app.users.router import router as users_router
 from backend.app.organizations.router import router as orgs_router
@@ -19,6 +24,7 @@ from backend.app.exports.router import router as exports_router
 from backend.app.integrations.router import router as integrations_router
 from backend.app.admin.router import router as admin_router
 from backend.app.analytics.router import router as analytics_router
+from backend.app.discovery.router import router as discovery_router
 
 
 @asynccontextmanager
@@ -64,6 +70,7 @@ app.include_router(exports_router,       prefix=f"{API_V1}/exports",        tags
 app.include_router(integrations_router,  prefix=f"{API_V1}/integrations",   tags=["Integrations"])
 app.include_router(admin_router,         prefix=f"{API_V1}/admin",          tags=["Admin"])
 app.include_router(analytics_router,     prefix=f"{API_V1}/analytics",      tags=["Analytics"])
+app.include_router(discovery_router,     prefix=f"{API_V1}",                tags=["Discovery"])
 
 
 @app.get("/health", tags=["Health"])

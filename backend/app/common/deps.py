@@ -34,7 +34,7 @@ async def get_current_user_from_token(token: str, db: AsyncSession):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
 
     result = await db.execute(
-        select(User).where(User.id == UUID(user_id), User.is_active == True, User.deleted_at.is_(None))
+        select(User).where(User.id == UUID(user_id), User.status == "active", User.deleted_at.is_(None))
     )
     user = result.scalar_one_or_none()
     if not user:

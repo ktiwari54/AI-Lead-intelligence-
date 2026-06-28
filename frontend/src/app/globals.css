@@ -1,27 +1,59 @@
+@import '../styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --color-primary: 37 99 235;
-  }
-
   * {
+    @apply border-border;
     box-sizing: border-box;
   }
 
   html {
     scroll-behavior: smooth;
   }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .input-base {
-    @apply block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100;
+    @apply block w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
+
+  .page-container {
+    @apply mx-auto w-full max-w-[1400px] space-y-6;
+  }
+
+  .surface-elevated {
+    @apply rounded-xl border border-border bg-card shadow-sm;
+  }
+}
+
+/* React Grid Layout — match enterprise design system */
+.dashboard-grid .react-grid-item {
+  transition: box-shadow 0.2s ease;
+}
+
+.dashboard-grid .react-grid-item.react-draggable-dragging {
+  z-index: 10;
+  box-shadow: var(--shadow-lg);
+}
+
+.dashboard-grid .react-grid-placeholder {
+  background: rgb(var(--primary) / 0.08) !important;
+  border: 2px dashed rgb(var(--primary) / 0.35) !important;
+  border-radius: var(--radius-xl) !important;
+  opacity: 1 !important;
+}
+
+.dashboard-grid .react-resizable-handle::after {
+  border-color: rgb(var(--muted-foreground) / 0.35) !important;
 }

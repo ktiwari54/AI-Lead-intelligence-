@@ -23,6 +23,7 @@ import {
   useCRMFunnel,
   useIndustryBreakdown,
 } from "@/hooks/useAnalytics";
+import { PageHeader } from "@/components/enterprise/PageHeader";
 
 const PERIOD_OPTIONS = [
   { label: "7d", value: 7 },
@@ -46,16 +47,16 @@ function StatCard({
 }) {
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+      <div className="bg-card rounded-xl border border-border p-6 animate-pulse">
         <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
         <div className="h-8 bg-gray-200 rounded w-1/2" />
       </div>
     );
   }
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <p className="text-sm text-gray-500 font-medium">{label}</p>
-      <p className="text-3xl font-bold text-gray-900 mt-1">
+    <div className="bg-card rounded-xl border border-border p-6">
+      <p className="text-sm text-muted-foreground font-medium">{label}</p>
+      <p className="text-3xl font-bold text-foreground mt-1">
         {value === null || value === undefined ? "—" : value}
       </p>
     </div>
@@ -65,7 +66,7 @@ function StatCard({
 function SectionSkeleton({ height = 280 }: { height?: number }) {
   return (
     <div
-      className="bg-white rounded-xl border border-gray-200 animate-pulse"
+      className="bg-card rounded-xl border border-border animate-pulse"
       style={{ height }}
     />
   );
@@ -92,31 +93,28 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Last updated: {new Date().toLocaleString()}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {PERIOD_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setPeriod(opt.value)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                period === opt.value
-                  ? "bg-indigo-600 text-white border-indigo-600"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-indigo-400"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="page-container mx-auto max-w-7xl space-y-6">
+      <PageHeader
+        title="Analytics Reports"
+        description={`Performance insights across discovery, scoring, and CRM. Last updated: ${new Date().toLocaleString()}`}
+        actions={
+          <div className="flex items-center gap-2">
+            {PERIOD_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setPeriod(opt.value)}
+                className={`rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors ${
+                  period === opt.value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/50"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {hasError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
@@ -161,7 +159,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Row 2: Lead Velocity */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-border p-6">
         <h2 className="text-base font-semibold text-gray-800 mb-4">Lead Velocity</h2>
         {velocity.isLoading ? (
           <SectionSkeleton height={280} />
@@ -204,8 +202,8 @@ export default function AnalyticsPage() {
       {/* Row 3: Score Distribution + CRM Funnel */}
       <div className="grid grid-cols-5 gap-4">
         {/* Score Distribution (60%) */}
-        <div className="col-span-3 bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Score Distribution</h2>
+        <div className="col-span-3 bg-card rounded-xl border border-border p-6">
+          <h2 className="text-base font-semibold text-foreground mb-4">Score Distribution</h2>
           {scoreDist.isLoading ? (
             <SectionSkeleton height={280} />
           ) : scoreDist.data ? (
@@ -233,8 +231,8 @@ export default function AnalyticsPage() {
         </div>
 
         {/* CRM Funnel (40%) */}
-        <div className="col-span-2 bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">CRM Funnel</h2>
+        <div className="col-span-2 bg-card rounded-xl border border-border p-6">
+          <h2 className="text-base font-semibold text-foreground mb-4">CRM Funnel</h2>
           {funnel.isLoading ? (
             <SectionSkeleton height={280} />
           ) : funnel.data ? (
@@ -268,8 +266,8 @@ export default function AnalyticsPage() {
       {/* Row 4: Industry Breakdown */}
       <div className="grid grid-cols-2 gap-4">
         {/* Companies by Industry */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Companies by Industry</h2>
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h2 className="text-base font-semibold text-foreground mb-4">Companies by Industry</h2>
           {industry.isLoading ? (
             <SectionSkeleton height={260} />
           ) : industry.data ? (
@@ -299,8 +297,8 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Contacts by Industry */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Contacts by Industry</h2>
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h2 className="text-base font-semibold text-foreground mb-4">Contacts by Industry</h2>
           {industry.isLoading ? (
             <SectionSkeleton height={260} />
           ) : industry.data ? (

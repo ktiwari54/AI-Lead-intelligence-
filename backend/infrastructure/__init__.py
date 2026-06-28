@@ -1,0 +1,1 @@
+"""Phase 3 infrastructure layer — adapters for external systems."""

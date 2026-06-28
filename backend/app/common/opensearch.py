@@ -1,21 +1,61 @@
 """OpenSearch async client and index lifecycle management."""
-from opensearchpy import AsyncOpenSearch
+from __future__ import annotations
+
+from typing import Any
+
+try:
+    from opensearchpy._async.client import AsyncOpenSearch
+    _OPENSEARCH_AVAILABLE = True
+except ImportError:
+    AsyncOpenSearch = None  # type: ignore[misc, assignment]
+    _OPENSEARCH_AVAILABLE = False
+
 from backend.config import get_settings
 
 settings = get_settings()
 
-_client: AsyncOpenSearch | None = None
+_client: Any = None
 
-def get_opensearch() -> AsyncOpenSearch:
+
+class _NoOpOpenSearch:
+    """Fallback when opensearch async client is unavailable."""
+
+    class indices:
+        @staticmethod
+        async def exists(*_args, **_kwargs) -> bool:
+            return False
+
+        @staticmethod
+        async def create(*_args, **_kwargs) -> None:
+            return None
+
+    @staticmethod
+    async def index(*_args, **_kwargs) -> None:
+        return None
+
+    @staticmethod
+    async def delete(*_args, **_kwargs) -> None:
+        return None
+
+    @staticmethod
+    async def bulk(*_args, **_kwargs) -> dict:
+        return {"items": []}
+
+
+def get_opensearch() -> Any:
     global _client
-    if _client is None:
-        _client = AsyncOpenSearch(
-            hosts=[settings.OPENSEARCH_URL],
-            http_compress=True,
-            use_ssl=settings.OPENSEARCH_URL.startswith("https"),
-            verify_certs=False,
-            ssl_show_warn=False,
-        )
+    if _client is not None:
+        return _client
+    if not _OPENSEARCH_AVAILABLE:
+        _client = _NoOpOpenSearch()
+        return _client
+    _client = AsyncOpenSearch(
+        hosts=[settings.OPENSEARCH_URL],
+        http_compress=True,
+        use_ssl=settings.OPENSEARCH_URL.startswith("https"),
+        verify_certs=False,
+        ssl_show_warn=False,
+    )
     return _client
 
 

@@ -1,0 +1,1 @@
+"""Phase 5 Discovery Platform — orchestrator, pipelines, and intelligence engine."""

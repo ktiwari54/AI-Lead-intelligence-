@@ -1,31 +1,102 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { get, post } from '@/lib/api'
+import { unwrapData } from '@/lib/normalize-api'
 import { getToken, setToken, clearToken, setUser, clearUser } from '@/lib/auth'
 import { LoginRequest, TokenResponse, User } from '@/types'
+
+interface ApiEnvelope<T> {
+  success?: boolean
+  data?: T
+}
+
+function extractErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } }).response
+    const detail = response?.data?.detail
+    if (typeof detail === 'string') return detail
+    if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg
+  }
+  if (error instanceof Error) return error.message
+  return 'Invalid email or password. Please try again.'
+}
 
 export function useCurrentUser() {
   return useQuery<User>({
     queryKey: ['currentUser'],
-    queryFn: () => get<User>('/users/me'),
+    queryFn: async () => {
+      const raw = await get<User | ApiEnvelope<User>>('/users/me')
+      return unwrapData(raw)
+    },
     enabled: typeof window !== 'undefined' && getToken() !== null,
     staleTime: 5 * 60 * 1000,
     retry: false,
   })
 }
 
-export function useLogin() {
+export function useLogin(redirectTo = '/dashboard') {
   const queryClient = useQueryClient()
   const router = useRouter()
 
   return useMutation<TokenResponse, Error, LoginRequest>({
-    mutationFn: (credentials) =>
-      post<TokenResponse>('/auth/login', credentials),
-    onSuccess: (data) => {
-      setToken(data.access_token)
-      setUser(data.user)
-      queryClient.setQueryData(['currentUser'], data.user)
-      router.push('/dashboard')
+    mutationFn: async (credentials) => {
+      try {
+        const raw = await post<TokenResponse | ApiEnvelope<TokenResponse>>('/auth/login', credentials)
+        return unwrapData(raw)
+      } catch (error) {
+        throw new Error(extractErrorMessage(error))
+      }
+    },
+    onSuccess: async (tokens) => {
+      setToken(tokens.access_token)
+      try {
+        const userRaw = await get<User | ApiEnvelope<User>>('/users/me')
+        const user = unwrapData(userRaw)
+        setUser(user)
+        queryClient.setQueryData(['currentUser'], user)
+      } catch {
+        // Token is valid; profile can load on next navigation
+      }
+      router.push(redirectTo)
+      router.refresh()
+    },
+  })
+}
+
+export interface RegisterRequest {
+  organization_name: string
+  first_name: string
+  last_name: string
+  email: string
+  password: string
+  timezone?: string
+}
+
+export function useRegister(redirectTo = '/dashboard') {
+  const queryClient = useQueryClient()
+  const router = useRouter()
+
+  return useMutation<TokenResponse, Error, RegisterRequest>({
+    mutationFn: async (data) => {
+      try {
+        const raw = await post<TokenResponse | ApiEnvelope<TokenResponse>>('/auth/register', data)
+        return unwrapData(raw)
+      } catch (error) {
+        throw new Error(extractErrorMessage(error))
+      }
+    },
+    onSuccess: async (tokens) => {
+      setToken(tokens.access_token)
+      try {
+        const userRaw = await get<User | ApiEnvelope<User>>('/users/me')
+        const user = unwrapData(userRaw)
+        setUser(user)
+        queryClient.setQueryData(['currentUser'], user)
+      } catch {
+        // Profile loads on next navigation
+      }
+      router.push(redirectTo)
+      router.refresh()
     },
   })
 }

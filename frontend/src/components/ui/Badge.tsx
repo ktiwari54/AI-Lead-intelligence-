@@ -1,36 +1,34 @@
-import { clsx } from 'clsx'
-import { ReactNode } from 'react'
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
 
-type Variant = 'primary' | 'success' | 'warning' | 'danger' | 'gray'
+const badgeVariants = cva(
+  'inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  {
+    variants: {
+      variant: {
+        default: 'border-transparent bg-primary text-primary-foreground shadow',
+        primary: 'border-transparent bg-primary text-primary-foreground shadow',
+        secondary: 'border-transparent bg-secondary text-secondary-foreground',
+        gray: 'border-transparent bg-secondary text-secondary-foreground',
+        destructive: 'border-transparent bg-destructive text-destructive-foreground shadow',
+        danger: 'border-transparent bg-destructive text-destructive-foreground shadow',
+        outline: 'text-foreground',
+        success: 'border-transparent bg-success/15 text-success',
+        warning: 'border-transparent bg-warning/15 text-warning',
+      },
+    },
+    defaultVariants: { variant: 'default' },
+  }
+)
 
-interface BadgeProps {
-  variant?: Variant
-  children: ReactNode
-  className?: string
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
 }
 
-const variantClasses: Record<Variant, string> = {
-  primary: 'bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-400',
-  success: 'bg-success-100 text-success-700 dark:bg-green-950 dark:text-green-400',
-  warning: 'bg-warning-100 text-warning-700 dark:bg-yellow-950 dark:text-yellow-400',
-  danger: 'bg-danger-100 text-danger-700 dark:bg-red-950 dark:text-red-400',
-  gray: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-}
-
-export default function Badge({
-  variant = 'gray',
-  children,
-  className,
-}: BadgeProps) {
-  return (
-    <span
-      className={clsx(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-        variantClasses[variant],
-        className
-      )}
-    >
-      {children}
-    </span>
-  )
-}
+export { Badge, badgeVariants }
+export default Badge
