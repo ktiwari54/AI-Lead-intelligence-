@@ -26,6 +26,7 @@ import {
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useDashboardStats, useLeadVelocity, useCRMFunnel } from '@/hooks/useAnalytics'
 import { DashboardGrid } from '@/components/dashboard/DashboardGrid'
+import { CountryMapWidget } from '@/components/dashboard/CountryMapWidget'
 import { useDashboardStore } from '@/stores/dashboard-store'
 import { PageHeader } from '@/components/enterprise/PageHeader'
 import { MetricCard } from '@/components/enterprise/MetricCard'
@@ -120,6 +121,9 @@ export default function DashboardPage() {
           </li>
         ))}
       </ul>
+    ),
+    'country-map': (
+      <CountryMapWidget />
     ),
     pipeline: (
       <div className="flex h-full min-h-[200px] flex-col">

@@ -56,16 +56,16 @@ export default function Modal({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className={`w-full ${sizeClasses[size]} bg-white dark:bg-gray-900 rounded-2xl shadow-xl`}
+                className={`w-full ${sizeClasses[size]} bg-card rounded-2xl shadow-xl border border-border`}
               >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                  <Dialog.Title className="text-base font-semibold text-gray-900 dark:text-white">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                  <Dialog.Title className="text-base font-semibold text-foreground">
                     {title}
                   </Dialog.Title>
                   <button
                     onClick={onClose}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-accent transition-colors"
                   >
                     <XMarkIcon className="h-5 w-5" />
                   </button>
@@ -76,7 +76,7 @@ export default function Modal({
 
                 {/* Footer */}
                 {footer && (
-                  <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800">
+                  <div className="px-6 py-4 border-t border-border">
                     {footer}
                   </div>
                 )}

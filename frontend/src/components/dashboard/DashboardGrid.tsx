@@ -13,6 +13,7 @@ const WIDGET_LABELS: Record<string, string> = {
   velocity: 'Lead velocity',
   'quick-actions': 'Quick actions',
   activity: 'Activity feed',
+  'country-map': 'Companies by country',
   pipeline: 'CRM pipeline',
 }
 
