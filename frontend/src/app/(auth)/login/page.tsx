@@ -16,9 +16,9 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
-const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL ?? ''
-const DEV_PASSWORD = process.env.NEXT_PUBLIC_DEV_PASSWORD ?? ''
-const SHOW_DEV_PANEL = process.env.NODE_ENV === 'development' && !!DEV_EMAIL
+const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL ?? 'dev@example.com'
+const DEV_PASSWORD = process.env.NEXT_PUBLIC_DEV_PASSWORD ?? 'DevPass123!'
+const SHOW_DEV_PANEL = process.env.NODE_ENV === 'development'
 
 function LoginForm() {
   const searchParams = useSearchParams()
@@ -28,20 +28,18 @@ function LoginForm() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   })
 
-  const fillDevCredentials = () => {
-    setValue('email', DEV_EMAIL, { shouldValidate: true })
-    setValue('password', DEV_PASSWORD, { shouldValidate: true })
-  }
-
   const onSubmit = async (values: LoginFormValues) => {
     await login.mutateAsync(values)
+  }
+
+  const signInWithDemo = () => {
+    onSubmit({ email: DEV_EMAIL, password: DEV_PASSWORD })
   }
 
   return (
@@ -116,16 +114,24 @@ function LoginForm() {
 
           {SHOW_DEV_PANEL && (
             <div className="mb-6 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-primary">Local dev account</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                <span className="font-mono text-foreground">{DEV_EMAIL}</span>
-              </p>
+              <p className="text-xs font-medium uppercase tracking-wide text-primary">Demo login</p>
+              <dl className="mt-3 space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-muted-foreground">Email</dt>
+                  <dd className="font-mono text-foreground">{DEV_EMAIL}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-muted-foreground">Password</dt>
+                  <dd className="font-mono text-foreground">{DEV_PASSWORD}</dd>
+                </div>
+              </dl>
               <button
                 type="button"
-                onClick={fillDevCredentials}
-                className="mt-3 text-sm font-medium text-primary hover:underline"
+                onClick={signInWithDemo}
+                disabled={isSubmitting || login.isPending}
+                className="mt-4 w-full rounded-lg border border-primary/20 bg-background px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
               >
-                Fill credentials →
+                {login.isPending ? 'Signing in...' : 'Sign in with demo account'}
               </button>
             </div>
           )}

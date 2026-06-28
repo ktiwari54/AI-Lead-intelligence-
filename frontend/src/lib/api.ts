@@ -25,10 +25,17 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status
+    const requestUrl = String(error.config?.url ?? '')
+    const isAuthAttempt =
+      requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register')
+    const onLoginPage =
+      typeof window !== 'undefined' && window.location.pathname.startsWith('/login')
+
+    if (status === 401 && !isAuthAttempt) {
       clearToken()
       clearUser()
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && !onLoginPage) {
         window.location.href = '/login'
       }
     }
