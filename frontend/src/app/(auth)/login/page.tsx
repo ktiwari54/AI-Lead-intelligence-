@@ -16,8 +16,9 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
-const DEV_EMAIL = 'dev@example.com'
-const DEV_PASSWORD = 'DevPass123!'
+const DEV_EMAIL = process.env.NEXT_PUBLIC_DEV_EMAIL ?? ''
+const DEV_PASSWORD = process.env.NEXT_PUBLIC_DEV_PASSWORD ?? ''
+const SHOW_DEV_PANEL = process.env.NODE_ENV === 'development' && !!DEV_EMAIL
 
 function LoginForm() {
   const searchParams = useSearchParams()
@@ -113,21 +114,21 @@ function LoginForm() {
             </p>
           </div>
 
-          <div className="mb-6 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-primary">Local dev account</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              <span className="font-mono text-foreground">{DEV_EMAIL}</span>
-              {' · '}
-              <span className="font-mono text-foreground">{DEV_PASSWORD}</span>
-            </p>
-            <button
-              type="button"
-              onClick={fillDevCredentials}
-              className="mt-3 text-sm font-medium text-primary hover:underline"
-            >
-              Fill credentials →
-            </button>
-          </div>
+          {SHOW_DEV_PANEL && (
+            <div className="mb-6 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-primary">Local dev account</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                <span className="font-mono text-foreground">{DEV_EMAIL}</span>
+              </p>
+              <button
+                type="button"
+                onClick={fillDevCredentials}
+                className="mt-3 text-sm font-medium text-primary hover:underline"
+              >
+                Fill credentials →
+              </button>
+            </div>
+          )}
 
           <div className="rounded-2xl border border-border bg-card p-8 shadow-xl shadow-slate-200/50">
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">

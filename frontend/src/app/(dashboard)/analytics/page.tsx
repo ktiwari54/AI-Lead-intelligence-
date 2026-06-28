@@ -48,8 +48,8 @@ function StatCard({
   if (loading) {
     return (
       <div className="bg-card rounded-xl border border-border p-6 animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
-        <div className="h-8 bg-gray-200 rounded w-1/2" />
+        <div className="h-4 bg-muted rounded w-3/4 mb-3" />
+        <div className="h-8 bg-muted rounded w-1/2" />
       </div>
     );
   }
@@ -117,13 +117,13 @@ export default function AnalyticsPage() {
       />
 
       {hasError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
-          <span className="text-red-700 text-sm font-medium">
+        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 flex items-center justify-between">
+          <span className="text-destructive text-sm font-medium">
             Failed to load analytics data.
           </span>
           <button
             onClick={refetchAll}
-            className="text-sm font-medium text-red-600 hover:text-red-800 underline"
+            className="text-sm font-medium text-destructive hover:underline"
           >
             Retry
           </button>
@@ -160,7 +160,7 @@ export default function AnalyticsPage() {
 
       {/* Row 2: Lead Velocity */}
       <div className="bg-card rounded-xl border border-border p-6">
-        <h2 className="text-base font-semibold text-gray-800 mb-4">Lead Velocity</h2>
+        <h2 className="text-base font-semibold text-foreground mb-4">Lead Velocity</h2>
         {velocity.isLoading ? (
           <SectionSkeleton height={280} />
         ) : velocity.data ? (
@@ -208,10 +208,10 @@ export default function AnalyticsPage() {
             <SectionSkeleton height={280} />
           ) : scoreDist.data ? (
             <>
-              <div className="flex gap-4 mb-3 text-sm text-gray-500">
-                <span>Avg: <strong className="text-gray-800">{scoreDist.data.avg_score?.toFixed(1)}</strong></span>
-                <span>Median: <strong className="text-gray-800">{scoreDist.data.median_score?.toFixed(1)}</strong></span>
-                <span>Scored: <strong className="text-gray-800">{scoreDist.data.total_scored}</strong></span>
+              <div className="flex gap-4 mb-3 text-sm text-muted-foreground">
+                <span>Avg: <strong className="text-foreground">{scoreDist.data.avg_score?.toFixed(1)}</strong></span>
+                <span>Median: <strong className="text-foreground">{scoreDist.data.median_score?.toFixed(1)}</strong></span>
+                <span>Scored: <strong className="text-foreground">{scoreDist.data.total_scored}</strong></span>
               </div>
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={scoreDist.data.buckets} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -237,9 +237,9 @@ export default function AnalyticsPage() {
             <SectionSkeleton height={280} />
           ) : funnel.data ? (
             <>
-              <div className="flex gap-4 mb-3 text-sm text-gray-500">
-                <span>Deals: <strong className="text-gray-800">{funnel.data.total_deals}</strong></span>
-                <span>Avg: <strong className="text-gray-800">${funnel.data.avg_deal_value?.toLocaleString()}</strong></span>
+              <div className="flex gap-4 mb-3 text-sm text-muted-foreground">
+                <span>Deals: <strong className="text-foreground">{funnel.data.total_deals}</strong></span>
+                <span>Avg: <strong className="text-foreground">${funnel.data.avg_deal_value?.toLocaleString()}</strong></span>
               </div>
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart

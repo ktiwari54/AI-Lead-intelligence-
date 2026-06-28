@@ -87,7 +87,6 @@ export const mainNavigation: NavSection[] = [
 ]
 
 export const bottomNavigation: NavItem[] = [
-  { name: 'Connectors', href: '/admin', icon: Plug },
   { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Admin', href: '/admin', icon: Shield, permission: 'admin:read' },

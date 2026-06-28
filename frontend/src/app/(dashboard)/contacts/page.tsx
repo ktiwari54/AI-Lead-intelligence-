@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Users, Funnel } from 'lucide-react'
+import { Plus, Users, Filter } from 'lucide-react'
 import { toast } from 'sonner'
 import { useContacts, useDeleteContact } from '@/hooks/useContacts'
 import { useDataTable } from '@/hooks/useDataTable'
@@ -135,7 +135,7 @@ export default function ContactsPage() {
         getRowId={(row) => row.id}
         toolbarExtra={
           <div className="flex items-center gap-2">
-            <Funnel className="h-4 w-4 text-muted-foreground" />
+            <Filter className="h-4 w-4 text-muted-foreground" />
             <select
               value={department}
               onChange={(e) => { setDepartment(e.target.value); setPage(1) }}
