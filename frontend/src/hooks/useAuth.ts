@@ -3,6 +3,14 @@ import { useRouter } from 'next/navigation'
 import { get, post } from '@/lib/api'
 import { unwrapData } from '@/lib/normalize-api'
 import { getToken, setToken, clearToken, setUser, clearUser } from '@/lib/auth'
+
+async function establishSession(): Promise<void> {
+  await fetch('/api/auth/session', { method: 'POST', credentials: 'include' })
+}
+
+async function clearSession(): Promise<void> {
+  await fetch('/api/auth/session', { method: 'DELETE', credentials: 'include' })
+}
 import { LoginRequest, TokenResponse, User } from '@/types'
 
 interface ApiEnvelope<T> {
@@ -57,8 +65,12 @@ export function useLogin(redirectTo = '/dashboard') {
       } catch {
         // Token is valid; profile can load on next navigation
       }
-      router.push(redirectTo)
-      router.refresh()
+      await establishSession()
+      if (typeof window !== 'undefined') {
+        window.location.assign(redirectTo)
+      } else {
+        router.push(redirectTo)
+      }
     },
   })
 }
@@ -95,8 +107,12 @@ export function useRegister(redirectTo = '/dashboard') {
       } catch {
         // Profile loads on next navigation
       }
-      router.push(redirectTo)
-      router.refresh()
+      await establishSession()
+      if (typeof window !== 'undefined') {
+        window.location.assign(redirectTo)
+      } else {
+        router.push(redirectTo)
+      }
     },
   })
 }
@@ -105,10 +121,11 @@ export function useLogout() {
   const queryClient = useQueryClient()
   const router = useRouter()
 
-  return () => {
+  return async () => {
     clearToken()
     clearUser()
     queryClient.clear()
+    await clearSession()
     router.push('/login')
   }
 }
