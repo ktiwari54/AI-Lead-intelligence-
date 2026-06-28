@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen`} style={{ outline: '4px solid red' }}>
+      <body className={`${inter.className} min-h-screen`}>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
