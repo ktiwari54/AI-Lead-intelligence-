@@ -7,6 +7,8 @@ from backend.app.workflows.engine.compiler import WorkflowCompiler
 from backend.app.workflows.engine.conditions import evaluate_condition, evaluate_conditions
 from backend.app.workflows.engine.validator import WorkflowValidator
 from backend.app.workflows.engine.approval import ApprovalEngine
+from backend.app.workflows.constants import OrchestrationMode
+from backend.app.workflows.orchestration import infer_orchestration_mode, validate_mode_constraints
 
 
 @pytest.fixture
@@ -108,6 +110,47 @@ def test_approval_majority():
         {"id": "3", "status": "pending"},
     ]
     assert engine.evaluate_policy(approval_type="majority", approvals=approvals) == "approved"
+
+
+def test_infer_event_driven_mode():
+    mode = infer_orchestration_mode(trigger_type="lead.created", canvas=SAMPLE_CANVAS)
+    assert mode == OrchestrationMode.EVENT_DRIVEN
+
+
+def test_infer_scheduled_mode():
+    mode = infer_orchestration_mode(trigger_type="cron", canvas=None)
+    assert mode == OrchestrationMode.SCHEDULED
+
+
+def test_infer_hitl_mode():
+    canvas = {
+        "nodes": [
+            {"key": "t", "type": "trigger"},
+            {"key": "a", "type": "approval", "config": {}},
+            {"key": "e", "type": "end"},
+        ],
+        "edges": [],
+    }
+    mode = infer_orchestration_mode(trigger_type="lead.updated", canvas=canvas)
+    assert mode == OrchestrationMode.HUMAN_IN_THE_LOOP
+
+
+def test_hitl_requires_approval_node():
+    errors = validate_mode_constraints(
+        OrchestrationMode.HUMAN_IN_THE_LOOP,
+        trigger_type="lead.updated",
+        canvas=SAMPLE_CANVAS,
+    )
+    assert any("approval" in e.lower() for e in errors)
+
+
+def test_scheduled_requires_schedule_or_cron():
+    errors = validate_mode_constraints(
+        OrchestrationMode.SCHEDULED,
+        trigger_type="lead.created",
+        canvas=SAMPLE_CANVAS,
+    )
+    assert len(errors) > 0
 
 
 @pytest.mark.asyncio

@@ -3,6 +3,14 @@ from __future__ import annotations
 from enum import Enum
 
 
+class OrchestrationMode(str, Enum):
+    """Hybrid orchestration execution mode — first-class workflow type."""
+
+    EVENT_DRIVEN = "event_driven"
+    SCHEDULED = "scheduled"
+    HUMAN_IN_THE_LOOP = "human_in_the_loop"
+
+
 class WorkflowStatus(str, Enum):
     DRAFT = "draft"
     PUBLISHED = "published"

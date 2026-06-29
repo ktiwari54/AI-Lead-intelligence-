@@ -26,6 +26,7 @@ async def list_workflows(
     page: int = 1,
     page_size: int = 25,
     is_active: bool | None = None,
+    orchestration_mode: str | None = None,
 ) -> tuple[list[Workflow], int]:
     q = select(Workflow).where(
         Workflow.organization_id == org_id,
@@ -33,6 +34,8 @@ async def list_workflows(
     )
     if is_active is not None:
         q = q.where(Workflow.is_active == is_active)
+    if orchestration_mode:
+        q = q.where(Workflow.orchestration_mode == orchestration_mode)
     count_q = select(func.count()).select_from(q.subquery())
     total = (await db.execute(count_q)).scalar() or 0
     q = q.order_by(Workflow.updated_at.desc()).offset((page - 1) * page_size).limit(page_size)
@@ -265,13 +268,32 @@ async def get_analytics(db: AsyncSession, org_id: uuid.UUID, days: int = 30) -> 
     }
 
 
-async def find_workflows_by_trigger(db: AsyncSession, org_id: uuid.UUID, trigger_type: str) -> list[Workflow]:
-    result = await db.execute(
-        select(Workflow).where(
-            Workflow.organization_id == org_id,
-            Workflow.trigger_type == trigger_type,
-            Workflow.is_active == True,  # noqa: E712
-            Workflow.deleted_at.is_(None),
-        )
+async def find_workflows_by_trigger(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    trigger_type: str,
+    *,
+    orchestration_modes: list[str] | None = None,
+) -> list[Workflow]:
+    q = select(Workflow).where(
+        Workflow.organization_id == org_id,
+        Workflow.trigger_type == trigger_type,
+        Workflow.is_active == True,  # noqa: E712
+        Workflow.deleted_at.is_(None),
     )
+    if orchestration_modes:
+        q = q.where(Workflow.orchestration_mode.in_(orchestration_modes))
+    result = await db.execute(q)
+    return list(result.scalars().all())
+
+
+async def find_scheduled_workflows(db: AsyncSession, org_id: uuid.UUID | None = None) -> list[Workflow]:
+    q = select(Workflow).where(
+        Workflow.orchestration_mode == "scheduled",
+        Workflow.is_active == True,  # noqa: E712
+        Workflow.deleted_at.is_(None),
+    )
+    if org_id:
+        q = q.where(Workflow.organization_id == org_id)
+    result = await db.execute(q)
     return list(result.scalars().all())

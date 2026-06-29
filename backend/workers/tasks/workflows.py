@@ -18,20 +18,28 @@ def _run_async(coro):
 
 
 @shared_task(bind=True, max_retries=3, name="workflows.run_execution")
-def run_workflow_execution(self, execution_id: str, org_id: str):
+def run_workflow_execution(self, execution_id: str, org_id: str, orchestration_mode: str | None = None):
     """Execute a workflow asynchronously via Celery."""
-    logger.info("Running workflow execution %s for org %s", execution_id, org_id)
+    logger.info(
+        "Running workflow execution %s for org %s mode=%s",
+        execution_id,
+        org_id,
+        orchestration_mode or "auto",
+    )
 
     async def _execute():
         from backend.database import AsyncSessionLocal
         from backend.app.workflows import service
+        from backend.app.workflows.constants import OrchestrationMode
 
+        mode = OrchestrationMode(orchestration_mode) if orchestration_mode else None
         async with AsyncSessionLocal() as db:
             await service._run_execution(
                 db,
                 uuid.UUID(execution_id),
                 uuid.UUID(org_id),
                 user_id=None,
+                mode=mode,
             )
 
     try:
@@ -66,6 +74,12 @@ def run_scheduled_workflows():
             )
             schedules = result.scalars().all()
             for sched in schedules:
+                from backend.app.workflows import repository as repo
+                from backend.app.workflows.constants import OrchestrationMode
+
+                wf = await repo.get_workflow(db, sched.workflow_id, sched.organization_id)
+                if not wf or wf.orchestration_mode != OrchestrationMode.SCHEDULED.value:
+                    continue
                 await service.execute_workflow(
                     db,
                     sched.workflow_id,

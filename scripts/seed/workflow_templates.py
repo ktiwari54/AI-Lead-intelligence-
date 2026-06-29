@@ -13,6 +13,7 @@ TEMPLATES = [
         "description": "Score and qualify new contacts automatically",
         "category": "sales",
         "trigger_type": "contact.created",
+        "orchestration_mode": "event_driven",
         "canvas": {
             "nodes": [
                 {"key": "trigger", "type": "trigger", "config": {"event": "contact.created"}},
@@ -36,6 +37,7 @@ TEMPLATES = [
         "description": "Route leads to owners based on territory",
         "category": "sales",
         "trigger_type": "lead.created",
+        "orchestration_mode": "event_driven",
         "canvas": {
             "nodes": [
                 {"key": "trigger", "type": "trigger", "config": {}},
@@ -56,6 +58,7 @@ TEMPLATES = [
         "description": "Automated follow-up sequence after activity",
         "category": "sales",
         "trigger_type": "activity.completed",
+        "orchestration_mode": "event_driven",
         "canvas": {
             "nodes": [
                 {"key": "trigger", "type": "trigger", "config": {}},
@@ -78,6 +81,7 @@ TEMPLATES = [
         "description": "AI research and summary for new companies",
         "category": "enrichment",
         "trigger_type": "company.created",
+        "orchestration_mode": "event_driven",
         "canvas": {
             "nodes": [
                 {"key": "trigger", "type": "trigger", "config": {}},
@@ -100,6 +104,7 @@ TEMPLATES = [
         "description": "Export and email daily pipeline report",
         "category": "reporting",
         "trigger_type": "cron",
+        "orchestration_mode": "scheduled",
         "canvas": {
             "nodes": [
                 {"key": "trigger", "type": "trigger", "config": {"cron": "0 8 * * 1-5"}},
@@ -111,6 +116,32 @@ TEMPLATES = [
                 {"source": "trigger", "target": "export"},
                 {"source": "export", "target": "email"},
                 {"source": "email", "target": "end"},
+            ],
+        },
+    },
+    {
+        "slug": "high-score-approval",
+        "name": "High-Score Lead Approval",
+        "description": "Manager approval before creating opportunity for leads scoring 90+",
+        "category": "sales",
+        "trigger_type": "lead.updated",
+        "orchestration_mode": "human_in_the_loop",
+        "canvas": {
+            "nodes": [
+                {"key": "trigger", "type": "trigger", "config": {"event": "lead.updated"}},
+                {"key": "check_score", "type": "condition", "config": {"condition": {"field": "trigger.score", "operator": "gte", "value": 90}}},
+                {"key": "approval", "type": "approval", "config": {"approval_type": "sequential", "approvers": ["manager"], "timeout_hours": 48}},
+                {"key": "create_deal", "type": "action", "config": {"action_type": "create_deal"}},
+                {"key": "notify", "type": "action", "config": {"action_type": "send_notification", "template": "opportunity_created"}},
+                {"key": "end", "type": "end", "config": {}},
+            ],
+            "edges": [
+                {"source": "trigger", "target": "check_score"},
+                {"source": "check_score", "target": "approval", "label": "true"},
+                {"source": "check_score", "target": "end", "label": "false"},
+                {"source": "approval", "target": "create_deal"},
+                {"source": "create_deal", "target": "notify"},
+                {"source": "notify", "target": "end"},
             ],
         },
     },
@@ -137,6 +168,7 @@ async def seed():
                 description=tmpl["description"],
                 category=tmpl["category"],
                 trigger_type=tmpl["trigger_type"],
+                orchestration_mode=tmpl.get("orchestration_mode", "event_driven"),
                 canvas=tmpl["canvas"],
                 is_system=True,
             ))

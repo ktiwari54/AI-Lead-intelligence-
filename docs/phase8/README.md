@@ -2,7 +2,15 @@
 
 **Version 1.0** | AI Lead Intelligence Platform
 
-Phase 8 defines the **enterprise visual workflow platform** — a no-code/low-code automation layer for lead intelligence, CRM operations, AI scoring, approvals, and scheduled jobs. It extends the Phase 3 rule-based workflows (`app/workflows/`) into a full **compiler → executor → state machine** system with a visual builder, AI nodes, and production-grade observability.
+Phase 8 defines a **hybrid orchestration platform** — not a simple workflow engine. It supports three first-class execution modes:
+
+| Mode | Purpose |
+|------|---------|
+| **Event-Driven** | Reacts to system events (lead created, deal won, …) |
+| **Scheduled** | Runs on cron/schedules (reports, exports, reminders) |
+| **Human-in-the-Loop** | Pauses for manager approval before high-impact actions |
+
+See [21-hybrid-orchestration-platform.md](./21-hybrid-orchestration-platform.md) for the full product model.
 
 ## Design Principles
 
@@ -116,6 +124,7 @@ flowchart TB
 | 18 | Administrator Guide | [18-administrator-guide.md](./18-administrator-guide.md) |
 | 19 | Operational Runbook | [19-operational-runbook.md](./19-operational-runbook.md) |
 | 20 | Production Deployment Guide | [20-production-deployment-guide.md](./20-production-deployment-guide.md) |
+| 21 | Hybrid Orchestration Platform | [21-hybrid-orchestration-platform.md](./21-hybrid-orchestration-platform.md) |
 
 ## Key Repository Paths
 

@@ -125,6 +125,9 @@ class WorkflowTemplate(BaseModel):
     category: Mapped[str] = mapped_column(String(50), server_default="general", nullable=False)
     canvas: Mapped[dict] = mapped_column(JSONB, server_default=text("'{}'::jsonb"), nullable=False)
     trigger_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    orchestration_mode: Mapped[str] = mapped_column(
+        String(30), server_default="event_driven", nullable=False
+    )
     is_system: Mapped[bool] = mapped_column(Boolean, server_default="false", nullable=False)
     usage_count: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
 

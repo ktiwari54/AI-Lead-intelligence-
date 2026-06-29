@@ -34,17 +34,29 @@ def _check_permission(user, permission: str) -> None:
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Requires {permission}")
 
 
+@router.get("/modes", response_model=APIResponse)
+async def list_orchestration_modes(current_user=Depends(get_current_user)):
+    _check_permission(current_user, "workflows:read")
+    return APIResponse(data=service.get_orchestration_catalog())
+
+
 @router.get("", response_model=PaginatedResponse)
 async def list_workflows(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     is_active: bool | None = None,
+    orchestration_mode: str | None = Query(None, description="event_driven | scheduled | human_in_the_loop"),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     _check_permission(current_user, "workflows:read")
     workflows, total = await service.list_workflows(
-        db, current_user.organization_id, page=page, page_size=page_size, is_active=is_active
+        db,
+        current_user.organization_id,
+        page=page,
+        page_size=page_size,
+        is_active=is_active,
+        orchestration_mode=orchestration_mode,
     )
     return PaginatedResponse.create(
         data=[w.model_dump() for w in workflows], total=total, page=page, per_page=page_size

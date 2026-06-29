@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.app.workflows.constants import NodeType
+from backend.app.workflows.constants import NodeType, OrchestrationMode
+from backend.app.workflows.orchestration import validate_mode_constraints
 
 
 class WorkflowValidator:
@@ -10,7 +11,15 @@ class WorkflowValidator:
 
     VALID_NODE_TYPES = {t.value for t in NodeType}
 
-    def validate(self, *, canvas: dict[str, Any] | None, steps: list[dict] | None, trigger_type: str) -> dict[str, Any]:
+    def validate(
+        self,
+        *,
+        canvas: dict[str, Any] | None,
+        steps: list[dict] | None,
+        trigger_type: str,
+        orchestration_mode: OrchestrationMode | str | None = None,
+        has_schedule: bool = False,
+    ) -> dict[str, Any]:
         errors: list[str] = []
         warnings: list[str] = []
 
@@ -25,6 +34,22 @@ class WorkflowValidator:
             errors.extend(self._validate_steps(steps))
         else:
             warnings.append("No canvas or steps defined; workflow will only support manual trigger")
+
+        if orchestration_mode:
+            mode = (
+                orchestration_mode
+                if isinstance(orchestration_mode, OrchestrationMode)
+                else OrchestrationMode(orchestration_mode)
+            )
+            errors.extend(
+                validate_mode_constraints(
+                    mode,
+                    trigger_type=trigger_type,
+                    canvas=canvas,
+                    steps=steps,
+                    has_schedule=has_schedule,
+                )
+            )
 
         return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
 

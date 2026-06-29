@@ -8,7 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.admin.models import Workflow, WorkflowExecution
 from backend.app.workflows import repository as repo
+from backend.app.workflows.constants import OrchestrationMode
 from backend.app.workflows.engine import WorkflowCompiler, WorkflowExecutor, WorkflowValidator
+from backend.app.workflows.engine.orchestrator import hybrid_orchestrator
+from backend.app.workflows.orchestration import MODE_PROFILES, infer_orchestration_mode, list_mode_catalog
 from backend.app.workflows.schemas import (
     WorkflowAnalyticsResponse,
     WorkflowCreateRequest,
@@ -27,11 +30,15 @@ _executor = WorkflowExecutor()
 
 def _to_response(wf: Workflow, version_number: int | None = None) -> WorkflowResponse:
     status = "published" if wf.is_active else "draft"
+    mode = getattr(wf, "orchestration_mode", OrchestrationMode.EVENT_DRIVEN.value)
+    profile = MODE_PROFILES.get(OrchestrationMode(mode))
     return WorkflowResponse(
         id=wf.id,
         organization_id=wf.organization_id,
         name=wf.name,
         description=wf.description,
+        orchestration_mode=mode,
+        orchestration_mode_label=profile.display_name if profile else mode,
         trigger_type=wf.trigger_type,
         trigger_config=wf.trigger_config or {},
         steps=wf.steps or [],
@@ -50,6 +57,10 @@ def _canvas_from_request(body: WorkflowCreateRequest | WorkflowUpdateRequest) ->
     return None
 
 
+def get_orchestration_catalog() -> list[dict]:
+    return list_mode_catalog()
+
+
 async def list_workflows(
     db: AsyncSession,
     org_id: uuid.UUID,
@@ -57,8 +68,16 @@ async def list_workflows(
     page: int = 1,
     page_size: int = 25,
     is_active: bool | None = None,
+    orchestration_mode: str | None = None,
 ) -> tuple[list[WorkflowResponse], int]:
-    workflows, total = await repo.list_workflows(db, org_id, page=page, page_size=page_size, is_active=is_active)
+    workflows, total = await repo.list_workflows(
+        db,
+        org_id,
+        page=page,
+        page_size=page_size,
+        is_active=is_active,
+        orchestration_mode=orchestration_mode,
+    )
     responses = []
     for wf in workflows:
         ver = await repo.get_latest_version(db, wf.id)
@@ -83,16 +102,27 @@ async def create_workflow(
     canvas = _canvas_from_request(body)
     steps = body.steps or []
 
+    orchestration_mode = body.orchestration_mode
     if body.template_slug:
         tmpl = await repo.get_template_by_slug(db, body.template_slug)
         if tmpl:
             canvas = tmpl.canvas
             steps = []
+            if not orchestration_mode and getattr(tmpl, "orchestration_mode", None):
+                orchestration_mode = OrchestrationMode(tmpl.orchestration_mode)
+
+    mode = infer_orchestration_mode(
+        trigger_type=body.trigger.type,
+        canvas=canvas,
+        steps=steps,
+        explicit_mode=orchestration_mode.value if orchestration_mode else None,
+    )
 
     validation = _validator.validate(
         canvas=canvas,
         steps=steps,
         trigger_type=body.trigger.type,
+        orchestration_mode=mode,
     )
     if not validation["valid"]:
         raise ValueError("; ".join(validation["errors"]))
@@ -113,6 +143,7 @@ async def create_workflow(
         trigger_type=body.trigger.type,
         trigger_config=body.trigger.config,
         steps=steps or plan.get("nodes", []),
+        orchestration_mode=mode.value,
         is_active=body.is_active,
     )
 
@@ -145,11 +176,26 @@ async def update_workflow(
     canvas = _canvas_from_request(body)
     steps = body.steps
 
-    if canvas or steps:
+    mode = (
+        body.orchestration_mode
+        or OrchestrationMode(getattr(wf, "orchestration_mode", OrchestrationMode.EVENT_DRIVEN.value))
+    )
+    if body.trigger or body.orchestration_mode or canvas or steps:
+        mode = infer_orchestration_mode(
+            trigger_type=body.trigger.type if body.trigger else wf.trigger_type,
+            canvas=canvas,
+            steps=steps or wf.steps,
+            explicit_mode=mode.value if isinstance(mode, OrchestrationMode) else str(mode),
+        )
+
+    if canvas or steps or body.trigger or body.orchestration_mode:
+        sched = await repo.get_schedule(db, wf.id)
         validation = _validator.validate(
             canvas=canvas,
             steps=steps or wf.steps,
             trigger_type=body.trigger.type if body.trigger else wf.trigger_type,
+            orchestration_mode=mode,
+            has_schedule=sched is not None and sched.is_active,
         )
         if not validation["valid"]:
             raise ValueError("; ".join(validation["errors"]))
@@ -166,6 +212,8 @@ async def update_workflow(
         updates["trigger_config"] = body.trigger.config
     if steps is not None:
         updates["steps"] = steps
+    if body.orchestration_mode or body.trigger or canvas or steps:
+        updates["orchestration_mode"] = mode.value if isinstance(mode, OrchestrationMode) else mode
 
     await repo.update_workflow(db, wf, **updates)
 
@@ -211,7 +259,14 @@ async def validate_workflow(
         return None
     ver = await repo.get_latest_version(db, wf.id)
     canvas = ver.canvas if ver else None
-    validation = _validator.validate(canvas=canvas, steps=wf.steps, trigger_type=wf.trigger_type)
+    sched = await repo.get_schedule(db, wf.id)
+    validation = _validator.validate(
+        canvas=canvas,
+        steps=wf.steps,
+        trigger_type=wf.trigger_type,
+        orchestration_mode=getattr(wf, "orchestration_mode", OrchestrationMode.EVENT_DRIVEN.value),
+        has_schedule=sched is not None and sched.is_active,
+    )
     plan = None
     if validation["valid"]:
         plan = _compiler.compile(
@@ -265,12 +320,14 @@ async def execute_workflow(
     if not wf.is_active:
         raise ValueError("Workflow is not active")
 
+    mode = OrchestrationMode(getattr(wf, "orchestration_mode", OrchestrationMode.EVENT_DRIVEN.value))
     trigger_data = {
         "entity_type": body.entity_type,
         "entity_id": str(body.entity_id) if body.entity_id else None,
         **body.payload,
         "triggered_by": str(user_id) if user_id else None,
         "trigger_type": "manual",
+        "orchestration_mode": mode.value,
     }
 
     execution = await repo.create_execution(
@@ -283,12 +340,17 @@ async def execute_workflow(
     await db.commit()
 
     if body.async_mode:
-        from backend.workers.tasks.workflows import run_workflow_execution
-
-        run_workflow_execution.delay(str(execution.id), str(org_id))
+        await hybrid_orchestrator.dispatch(
+            mode,
+            workflow_id=wf.id,
+            org_id=org_id,
+            execution_id=execution.id,
+            trigger_data=trigger_data,
+            async_mode=True,
+        )
         return execution
 
-    result = await _run_execution(db, execution.id, org_id, user_id, event_bus=event_bus)
+    result = await _run_execution(db, execution.id, org_id, user_id, event_bus=event_bus, mode=mode)
     return result
 
 
@@ -298,12 +360,14 @@ async def _run_execution(
     org_id: uuid.UUID,
     user_id: uuid.UUID | None,
     event_bus: EventBus | None = None,
+    mode: OrchestrationMode | None = None,
 ) -> WorkflowExecution:
     execution = await repo.get_execution(db, execution_id, org_id)
     if not execution:
         raise ValueError("Execution not found")
 
     wf = execution.workflow
+    mode = mode or OrchestrationMode(getattr(wf, "orchestration_mode", OrchestrationMode.EVENT_DRIVEN.value))
     ver = await repo.get_latest_version(db, wf.id)
     plan = (ver.compiled_plan if ver and ver.compiled_plan else None) or _compiler.compile(
         trigger_type=wf.trigger_type,
@@ -321,12 +385,17 @@ async def _run_execution(
         user_id=user_id,
         trigger_data=execution.trigger_data or {},
         execution_id=execution.id,
+        orchestration_mode=mode,
     )
+
+    final_status = outcome["status"]
+    if final_status == "waiting" and mode == OrchestrationMode.HUMAN_IN_THE_LOOP:
+        final_status = hybrid_orchestrator.execution_status_on_approval_wait(mode)
 
     await repo.update_execution(
         db,
         execution,
-        status=outcome["status"],
+        status=final_status,
         step_results=outcome["step_results"],
         error_message=outcome.get("error_message"),
     )
@@ -335,8 +404,8 @@ async def _run_execution(
         db,
         execution_id=execution.id,
         level="info" if outcome["status"] == "completed" else "error",
-        message=f"Workflow execution {outcome['status']}",
-        payload={"step_count": len(outcome["step_results"])},
+        message=f"Workflow execution {final_status} ({mode.value})",
+        payload={"step_count": len(outcome["step_results"]), "orchestration_mode": mode.value},
     )
     await db.commit()
 
@@ -371,9 +440,11 @@ async def resume_execution(
     user_id: uuid.UUID | None,
 ) -> WorkflowExecution | None:
     execution = await repo.get_execution(db, execution_id, org_id)
-    if not execution or execution.status not in ("paused", "waiting"):
+    if not execution or execution.status not in ("paused", "waiting", "waiting_approval"):
         return None
-    return await _run_execution(db, execution_id, org_id, user_id)
+    wf = execution.workflow
+    mode = OrchestrationMode(getattr(wf, "orchestration_mode", OrchestrationMode.EVENT_DRIVEN.value))
+    return await _run_execution(db, execution_id, org_id, user_id, mode=mode)
 
 
 async def cancel_execution(db: AsyncSession, execution_id: uuid.UUID, org_id: uuid.UUID) -> WorkflowExecution | None:
@@ -426,20 +497,37 @@ async def handle_domain_event(
     if not trigger:
         return []
 
-    workflows = await repo.find_workflows_by_trigger(db, org_id, trigger.value)
+    workflows = await repo.find_workflows_by_trigger(
+        db,
+        org_id,
+        trigger.value,
+        orchestration_modes=[
+            OrchestrationMode.EVENT_DRIVEN.value,
+            OrchestrationMode.HUMAN_IN_THE_LOOP.value,
+        ],
+    )
     execution_ids: list[uuid.UUID] = []
     for wf in workflows:
+        mode = OrchestrationMode(getattr(wf, "orchestration_mode", OrchestrationMode.EVENT_DRIVEN.value))
+        if not hybrid_orchestrator.should_process_event(mode):
+            continue
+        trigger_data = {"event_type": event_type, "orchestration_mode": mode.value, **payload}
         execution = await repo.create_execution(
             db,
             workflow_id=wf.id,
             status="pending",
-            trigger_data={"event_type": event_type, **payload},
+            trigger_data=trigger_data,
             step_results=[],
         )
         execution_ids.append(execution.id)
-        from backend.workers.tasks.workflows import run_workflow_execution
-
-        run_workflow_execution.delay(str(execution.id), str(org_id))
+        await hybrid_orchestrator.dispatch(
+            mode,
+            workflow_id=wf.id,
+            org_id=org_id,
+            execution_id=execution.id,
+            trigger_data=trigger_data,
+            async_mode=True,
+        )
 
     if execution_ids:
         await db.commit()

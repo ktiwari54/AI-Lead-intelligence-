@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from backend.app.workflows.constants import ExecutionStatus, NodeType
+from backend.app.workflows.constants import ExecutionStatus, NodeType, OrchestrationMode
 from backend.app.workflows.engine.actions import action_registry
 from backend.app.workflows.engine.approval import ApprovalEngine
 from backend.app.workflows.engine.conditions import evaluate_condition
@@ -29,6 +29,7 @@ class WorkflowExecutor:
         trigger_data: dict[str, Any],
         execution_id: UUID | None = None,
         checkpoint: dict[str, Any] | None = None,
+        orchestration_mode: OrchestrationMode | None = None,
     ) -> dict[str, Any]:
         context: dict[str, Any] = {
             "trigger": trigger_data,
@@ -86,6 +87,13 @@ class WorkflowExecutor:
             if ntype == NodeType.APPROVAL.value:
                 step_results.append({"node": current, "status": "waiting_approval", "type": ntype})
                 status = ExecutionStatus.WAITING.value
+                if orchestration_mode == OrchestrationMode.HUMAN_IN_THE_LOOP:
+                    await self._create_approval_request(
+                        execution_id=execution_id,
+                        node_key=current,
+                        config=node.get("config", {}),
+                        context=context,
+                    )
                 break
 
             if ntype == NodeType.PARALLEL.value:
@@ -186,3 +194,25 @@ class WorkflowExecutor:
                 continue
             return edge.get("target")
         return edges[0].get("target") if edges else None
+
+    async def _create_approval_request(
+        self,
+        *,
+        execution_id: UUID | None,
+        node_key: str,
+        config: dict[str, Any],
+        context: dict[str, Any],
+    ) -> None:
+        if not execution_id:
+            return
+        logger.info(
+            "Human-in-the-loop approval required execution=%s node=%s approvers=%s",
+            execution_id,
+            node_key,
+            config.get("approvers", []),
+        )
+        context.setdefault("pending_approvals", []).append({
+            "node_key": node_key,
+            "approval_type": config.get("approval_type", "sequential"),
+            "approvers": config.get("approvers", []),
+        })

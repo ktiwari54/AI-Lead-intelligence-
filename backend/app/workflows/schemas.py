@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from backend.app.workflows.constants import OrchestrationMode
+
 
 class WorkflowNodeSchema(BaseModel):
     key: str
@@ -33,9 +35,18 @@ class WorkflowTriggerSchema(BaseModel):
     config: dict[str, Any] = Field(default_factory=dict)
 
 
+class OrchestrationModeInfo(BaseModel):
+    mode: str
+    display_name: str
+    purpose: str
+    example: str
+    dispatcher: str
+
+
 class WorkflowCreateRequest(BaseModel):
     name: str
     description: str | None = None
+    orchestration_mode: OrchestrationMode | None = None
     trigger: WorkflowTriggerSchema
     canvas: WorkflowCanvasSchema | None = None
     steps: list[dict[str, Any]] | None = None
@@ -46,6 +57,7 @@ class WorkflowCreateRequest(BaseModel):
 class WorkflowUpdateRequest(BaseModel):
     name: str | None = None
     description: str | None = None
+    orchestration_mode: OrchestrationMode | None = None
     trigger: WorkflowTriggerSchema | None = None
     canvas: WorkflowCanvasSchema | None = None
     steps: list[dict[str, Any]] | None = None
@@ -57,6 +69,8 @@ class WorkflowResponse(BaseModel):
     organization_id: UUID
     name: str
     description: str | None
+    orchestration_mode: str
+    orchestration_mode_label: str | None = None
     trigger_type: str
     trigger_config: dict[str, Any]
     steps: list[dict[str, Any]]
@@ -150,6 +164,7 @@ class WorkflowTemplateResponse(BaseModel):
     description: str | None
     category: str
     trigger_type: str
+    orchestration_mode: str = "event_driven"
     is_system: bool
     usage_count: int
     canvas: dict[str, Any]

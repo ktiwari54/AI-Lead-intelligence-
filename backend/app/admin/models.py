@@ -92,10 +92,16 @@ class Workflow(BaseModel):
         JSONB, server_default=text("'{}'::jsonb"), nullable=False
     )
     steps: Mapped[list] = mapped_column(JSONB, server_default="[]", nullable=False)
+    orchestration_mode: Mapped[str] = mapped_column(
+        String(30), server_default="event_driven", nullable=False
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="true", nullable=False)
     run_count: Mapped[int] = mapped_column(server_default="0", nullable=False)
 
-    __table_args__ = (Index("ix_workflows_organization_id", "organization_id"),)
+    __table_args__ = (
+        Index("ix_workflows_organization_id", "organization_id"),
+        Index("ix_workflows_orchestration_mode", "orchestration_mode"),
+    )
 
     organization: Mapped["Organization"] = relationship(
         "Organization", back_populates="workflows"
