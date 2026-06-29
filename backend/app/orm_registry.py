@@ -17,3 +17,4 @@ from backend.app.search.models import *  # noqa: F401, F403
 from backend.app.users.models import *  # noqa: F401, F403
 from backend.app.workflows.models import *  # noqa: F401, F403
 from backend.app.analytics.models import *  # noqa: F401, F403
+from backend.app.platform.models import *  # noqa: F401, F403
