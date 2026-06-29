@@ -28,6 +28,7 @@ celery_app = Celery(
         "backend.workers.tasks.scoring",
         "backend.workers.tasks.notifications",
         "backend.workers.tasks.discovery",
+        "backend.workers.tasks.workflows",
     ],
 )
 
@@ -69,6 +70,10 @@ celery_app.conf.update(
         "cleanup-exports": {
             "task": "backend.workers.tasks.export.cleanup_expired_exports",
             "schedule": crontab(hour=3, minute=0),
+        },
+        "run-scheduled-workflows": {
+            "task": "backend.workers.tasks.workflows.run_scheduled_workflows",
+            "schedule": crontab(minute="*/5"),
         },
     },
 )

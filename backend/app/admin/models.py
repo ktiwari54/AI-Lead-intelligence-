@@ -1,5 +1,7 @@
 import uuid
-from sqlalchemy import String, ForeignKey, Index, Text, Boolean, text
+from datetime import datetime
+
+from sqlalchemy import DateTime, String, ForeignKey, Index, Text, Boolean, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.app.common.base import BaseModel
@@ -101,6 +103,9 @@ class Workflow(BaseModel):
     executions: Mapped[list["WorkflowExecution"]] = relationship(
         "WorkflowExecution", back_populates="workflow"
     )
+    versions: Mapped[list["WorkflowVersion"]] = relationship(
+        "WorkflowVersion", back_populates="workflow", foreign_keys="WorkflowVersion.workflow_id"
+    )
 
 
 class WorkflowExecution(BaseModel):
@@ -115,6 +120,10 @@ class WorkflowExecution(BaseModel):
     )
     step_results: Mapped[list] = mapped_column(JSONB, server_default="[]", nullable=False)
     error_message: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    correlation_id: Mapped[str | None] = mapped_column(String(100))
+    idempotency_key: Mapped[str | None] = mapped_column(String(100))
 
     __table_args__ = (
         Index("ix_workflow_executions_workflow_id", "workflow_id"),

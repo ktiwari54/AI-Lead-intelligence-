@@ -26,6 +26,7 @@ from backend.app.integrations.router import router as integrations_router
 from backend.app.admin.router import router as admin_router
 from backend.app.analytics.router import router as analytics_router
 from backend.app.discovery.router import router as discovery_router
+from backend.app.workflows.router import router as workflows_router
 from backend.infrastructure.observability.metrics import metrics
 
 
@@ -73,6 +74,7 @@ app.include_router(integrations_router,  prefix=f"{API_V1}/integrations",   tags
 app.include_router(admin_router,         prefix=f"{API_V1}/admin",          tags=["Admin"])
 app.include_router(analytics_router,     prefix=f"{API_V1}/analytics",      tags=["Analytics"])
 app.include_router(discovery_router,     prefix=f"{API_V1}",                tags=["Discovery"])
+app.include_router(workflows_router,     prefix=f"{API_V1}",                tags=["Workflows"])
 
 
 @app.get("/health", tags=["Health"])
