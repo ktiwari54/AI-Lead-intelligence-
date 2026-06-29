@@ -31,6 +31,7 @@ celery_app = Celery(
         "backend.workers.tasks.workflows",
         "backend.workers.tasks.analytics",
         "backend.workers.tasks.platform",
+        "backend.workers.tasks.security",
     ],
 )
 
@@ -92,6 +93,14 @@ celery_app.conf.update(
         "process-webhook-retries": {
             "task": "backend.workers.tasks.platform.process_webhook_retries",
             "schedule": crontab(minute="*/2"),
+        },
+        "run-security-compliance": {
+            "task": "backend.workers.tasks.security.run_compliance_checks",
+            "schedule": crontab(hour=5, minute=0),
+        },
+        "process-soc-alerts": {
+            "task": "backend.workers.tasks.security.process_soc_alerts",
+            "schedule": crontab(minute="*/15"),
         },
     },
 )

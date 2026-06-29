@@ -64,7 +64,7 @@ Write-Host "DB container:  $db" -ForegroundColor DarkGray
 
 $actionCount = @($All, $Migrate, $Seed, $Health, [bool]$Logs, [bool]$Test).Where({ $_ }).Count
 if ($actionCount -eq 0) {
-    $Test = "backend/tests/test_analytics_bi.py backend/tests/test_platform.py"
+    $Test = "backend/tests/test_analytics_bi.py backend/tests/test_platform.py backend/tests/test_security.py"
 }
 
 if ($Migrate) {
