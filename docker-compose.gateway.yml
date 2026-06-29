@@ -1,0 +1,78 @@
+# Gateway overlay — Traefik + Kong + RabbitMQ + MinIO (all free/OSS)
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.gateway.yml --profile gateway up -d
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v3.2
+    profiles: [gateway]
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./infra/gateway/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./infra/gateway/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  kong:
+    image: kong:3.8
+    profiles: [gateway]
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+    volumes:
+      - ./infra/gateway/kong/kong.yml:/kong/kong.yml:ro
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    profiles: [gateway]
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ali
+      RABBITMQ_DEFAULT_PASS: ali_dev_pass
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    profiles: [gateway]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
+  minio_data:

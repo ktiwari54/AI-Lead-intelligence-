@@ -1,0 +1,46 @@
+http:
+  routers:
+    frontend:
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      service: frontend
+      entryPoints:
+        - web
+
+    api-gateway:
+      rule: "PathPrefix(`/api`)"
+      priority: 10
+      service: kong
+      entryPoints:
+        - web
+
+    kong-admin:
+      rule: "PathPrefix(`/kong`)"
+      priority: 20
+      service: kong-admin
+      entryPoints:
+        - web
+      middlewares:
+        - strip-kong-prefix
+
+  middlewares:
+    strip-kong-prefix:
+      stripPrefix:
+        prefixes:
+          - "/kong"
+
+  services:
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:3000"
+
+    kong:
+      loadBalancer:
+        servers:
+          - url: "http://kong:8000"
+
+    kong-admin:
+      loadBalancer:
+        servers:
+          - url: "http://kong:8001"

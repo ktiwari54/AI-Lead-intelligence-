@@ -8,8 +8,14 @@ tunnel: <TUNNEL_UUID>
 credentials-file: C:\Users\PC\.cloudflared\<TUNNEL_UUID>.json
 
 ingress:
+  # Recommended: single entry via Traefik (routes /api -> Kong -> FastAPI, / -> Next.js)
   - hostname: app.yourdomain.com
-    service: http://localhost:3000
+    service: http://localhost:80
   - hostname: api.yourdomain.com
-    service: http://localhost:8000
+    service: http://localhost:80
+  # Direct (without gateway):
+  # - hostname: app.yourdomain.com
+  #   service: http://localhost:3000
+  # - hostname: api.yourdomain.com
+  #   service: http://localhost:8000
   - service: http_status:404

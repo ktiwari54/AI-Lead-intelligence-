@@ -2,10 +2,25 @@
 
 All steps use **Cloudflare Free** — no paid plan required.
 
+## Architecture
+
+```
+Internet
+    │
+Cloudflare (Free CDN + SSL + DDoS)
+    │
+cloudflared tunnel
+    │
+Traefik :80
+    ├── /api  → Kong → FastAPI
+    └── /     → Next.js :3000
+```
+
 ## 1. Install cloudflared (Windows)
 
 ```powershell
-winget install --id Cloudflare.cloudflared
+.\scripts\install-cloudflare.ps1
+# or: winget install --id Cloudflare.cloudflared
 cloudflared --version
 ```
 
