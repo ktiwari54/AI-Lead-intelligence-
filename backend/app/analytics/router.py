@@ -17,7 +17,10 @@ from backend.app.common.deps import get_current_user, get_db
 from backend.app.common.response import APIResponse
 from backend.app.users.models import User
 
-router = APIRouter(prefix="/analytics", tags=["Analytics"])
+from backend.app.analytics.bi_router import router as bi_router
+
+router = APIRouter(tags=["Analytics"])
+router.include_router(bi_router)
 _service = AnalyticsService()
 CACHE_TTL = 300  # 5 minutes
 

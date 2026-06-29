@@ -89,3 +89,37 @@ class FullAnalyticsResponse(BaseModel):
     crm_funnel: CRMFunnelData
     credit_usage: CreditUsageData
     generated_at: datetime
+
+
+class InsightQuestionRequest(BaseModel):
+    question: str
+
+
+class DashboardCreateRequest(BaseModel):
+    name: str
+    slug: str
+    dashboard_type: str = "custom"
+    description: str | None = None
+    layout: dict = {}
+    filters: dict = {}
+
+
+class DashboardResponse(BaseModel):
+    id: str
+    name: str
+    slug: str
+    dashboard_type: str
+    description: str | None
+    is_system: bool
+    version: int
+
+    model_config = {"from_attributes": True}
+
+
+class AlertRuleCreateRequest(BaseModel):
+    name: str
+    metric_key: str
+    condition: str
+    threshold: float
+    severity: str = "warning"
+    channels: list[str] = ["in_app"]

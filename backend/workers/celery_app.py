@@ -29,6 +29,8 @@ celery_app = Celery(
         "backend.workers.tasks.notifications",
         "backend.workers.tasks.discovery",
         "backend.workers.tasks.workflows",
+        "backend.workers.tasks.analytics",
+        "backend.workers.tasks.platform",
     ],
 )
 
@@ -74,6 +76,22 @@ celery_app.conf.update(
         "run-scheduled-workflows": {
             "task": "backend.workers.tasks.workflows.run_scheduled_workflows",
             "schedule": crontab(minute="*/5"),
+        },
+        "aggregate-daily-metrics": {
+            "task": "backend.workers.tasks.analytics.aggregate_daily_metrics",
+            "schedule": crontab(hour=1, minute=0),
+        },
+        "check-analytics-alerts": {
+            "task": "backend.workers.tasks.analytics.check_alert_rules",
+            "schedule": crontab(minute="*/30"),
+        },
+        "refresh-analytics-forecasts": {
+            "task": "backend.workers.tasks.analytics.refresh_forecasts",
+            "schedule": crontab(hour=4, minute=0),
+        },
+        "process-webhook-retries": {
+            "task": "backend.workers.tasks.platform.process_webhook_retries",
+            "schedule": crontab(minute="*/2"),
         },
     },
 )
