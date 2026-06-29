@@ -149,6 +149,7 @@ TEMPLATES = [
 
 
 async def seed():
+    import backend.app.orm_registry  # noqa: F401 — resolve cross-module ORM relationships
     from sqlalchemy import select
     from backend.database import AsyncSessionLocal
     from backend.app.workflows.models import WorkflowTemplate
